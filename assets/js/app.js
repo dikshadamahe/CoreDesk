@@ -66,6 +66,7 @@ function initQuickStatusHandlers() {
                     body: JSON.stringify({
                         ticket_id: parseInt(ticketId, 10),
                         status: newStatus,
+                        new_status: newStatus,
                         csrf_token: csrfToken
                     })
                 });

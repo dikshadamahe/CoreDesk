@@ -22,8 +22,8 @@ if ($currentUser['role'] === 'customer') {
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true);
 
-$ticketId  = (int)($data['ticket_id'] ?? 0);
-$newStatus = trim($data['new_status'] ?? '');
+$ticketId  = (int)($data['ticket_id'] ?? $data['id'] ?? 0);
+$newStatus = trim($data['new_status'] ?? $data['status'] ?? '');
 $agentId   = isset($data['assigned_agent_id']) ? (int)$data['assigned_agent_id'] : null;
 
 $validStatuses = ['Open', 'In-Progress', 'Resolved', 'Closed'];
