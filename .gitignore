@@ -1,0 +1,22 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Database Local Run Artifacts (schema.sql is tracked)
+database/*.sqlite
+database/*.sqlite-journal
+database/*.db
+
+# IDE & Editor Directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment Variables
+.env
+.env.local
+
+# Logs
+*.log
+error_log
