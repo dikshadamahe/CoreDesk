@@ -1,0 +1,42 @@
+# =====================================================================
+# CoreDesk — Apache Configuration & Security Policies
+# =====================================================================
+
+# Prevent directory index file browsing
+Options -Indexes
+
+# Set default directory index
+DirectoryIndex index.php login.php
+
+# Prevent access to sensitive database dumps, SQLite files, and configs
+<FilesMatch "^(coredesk\.sqlite|schema\.sql|\.env|\.git|composer\..*)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# HTTP Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Enable URL Rewriting if mod_rewrite is active
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Redirect trailing slashes if not a folder
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+</IfModule>
+
+# Custom Error Pages
+ErrorDocument 404 /index.php
+ErrorDocument 403 /index.php
