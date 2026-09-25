@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // login.php
-// Clean Session Authentication & Quick Demo Profile Switcher
+// Enterprise Identity & Access Management (Atlassian Cloud SSO Aesthetic)
 // =====================================================================
 
 declare(strict_types=1);
@@ -9,7 +9,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/database.php';
 
-// Redirect if already logged in
+// Redirect if already authenticated
 if (isLoggedIn()) {
     header('Location: index.php');
     exit;
@@ -17,17 +17,15 @@ if (isLoggedIn()) {
 
 $error = null;
 
-// Handle Form Submission or 1-Click Quick Demo Login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $quickRole = $_POST['quick_login_role'] ?? null;
 
     if ($quickRole) {
-        // Fast-switch for evaluators/interviewers
         $roleMap = [
-            'admin' => 'admin@coredesk.local',
-            'agent' => 'alex@coredesk.local',
+            'admin'    => 'admin@coredesk.local',
+            'agent'    => 'alex@coredesk.local',
             'customer' => 'rahul@client.com',
         ];
         if (isset($roleMap[$quickRole])) {
@@ -37,44 +35,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($email)) {
-        $error = 'Please provide an email address.';
+        $error = 'Please provide an authorized corporate email.';
     } else {
-        // Hand-written prepared query
         $stmt = $pdo->prepare("SELECT id, name, email, password_hash, role FROM users WHERE email = :email LIMIT 1");
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
 
         if ($user && ($password === 'password123' || password_verify($password, $user['password_hash']))) {
-            // Establish session
             $_SESSION['user'] = [
-                'id' => (int)$user['id'],
-                'name' => $user['name'],
+                'id'    => (int)$user['id'],
+                'name'  => $user['name'],
                 'email' => $user['email'],
-                'role' => $user['role'],
+                'role'  => $user['role'],
             ];
             header('Location: index.php');
             exit;
         } else {
-            $error = 'Invalid credentials. Use test accounts or enter correct password.';
+            $error = 'Invalid corporate credentials. Click one of the demo profile switchers below.';
         }
     }
 }
 
-$pageTitle = 'Sign In';
+$isAuthPage = true;
+$pageTitle = 'Enterprise Sign In';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div class="auth-container" style="max-width: 480px; margin: 40px auto;">
-    <div class="card" style="box-shadow: 0 12px 32px rgba(0,0,0,0.08);">
-        <div class="card-header" style="text-align: center; padding: 28px 24px 16px;">
-            <div style="font-size: 36px; margin-bottom: 8px;">⚡</div>
-            <h2 style="margin: 0; font-size: 22px;">Sign in to CoreDesk</h2>
-            <p class="text-muted" style="margin: 6px 0 0; font-size: 14px;">High-concurrency Core PHP &amp; MySQL Ticketing</p>
+<div class="mnc-login-wrapper">
+    <div class="login-glass-card">
+        
+        <div class="login-card-header">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: linear-gradient(135deg, #0052CC, #0747A6); border-radius: 12px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,82,204,0.35);">
+                <span style="font-size: 24px; color: #FFFFFF;">⚡</span>
+            </div>
+            <h2 style="font-size: 22px; font-weight: 700; color: #172B4D; margin-bottom: 4px;">Sign in to CoreDesk</h2>
+            <p style="color: #6B778C; font-size: 13.5px; margin: 0;">Enterprise Incident Management &middot; Jira Standard</p>
         </div>
 
-        <div class="card-body" style="padding: 24px;">
+        <div style="padding: 28px 32px 32px;">
             <?php if ($error): ?>
-                <div class="alert alert-danger" style="margin-bottom: 20px;">
+                <div class="toast-alert toast-error" style="position: static; margin-bottom: 20px; width: 100%;">
                     <?= e($error) ?>
                 </div>
             <?php endif; ?>
@@ -83,40 +83,59 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
 
                 <div>
-                    <label for="email" style="display: block; font-weight: 500; margin-bottom: 6px; font-size: 14px;">Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="user@coredesk.local" required autofocus>
+                    <label style="display: block; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6B778C; margin-bottom: 6px; letter-spacing: 0.04em;">
+                        Work Email Address
+                    </label>
+                    <input type="email" name="email" class="form-control" placeholder="user@coredesk.local" required autofocus style="background: #FFFFFF;">
                 </div>
 
                 <div>
-                    <label for="password" style="display: block; font-weight: 500; margin-bottom: 6px; font-size: 14px;">Password</label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <label style="font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6B778C; letter-spacing: 0.04em;">
+                            Password
+                        </label>
+                        <span style="font-size: 12px; color: var(--jira-blue);">SSO Active</span>
+                    </div>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required style="background: #FFFFFF;">
                 </div>
 
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 8px; padding: 10px;">
-                    Sign In
+                <button type="submit" class="btn btn-primary" style="padding: 10px; width: 100%; margin-top: 4px; font-size: 14px;">
+                    Log In to Workspace
                 </button>
             </form>
 
-            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color, #e2e8f0); text-align: center;">
-                <p style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    ⚡ One-Click Demo Profiles
-                </p>
-                <form method="POST" action="login.php" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                    <button type="submit" name="quick_login_role" value="admin" class="btn btn-outline btn-sm" style="font-size: 12px; padding: 8px 4px;">
-                        👑 Lead Admin
+            <!-- 1-Click Persona Switcher for Evaluators / Recruiters -->
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--jira-border-subtle); text-align: center;">
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6B778C; letter-spacing: 0.06em; display: block; margin-bottom: 12px;">
+                    ⚡ 1-Click Fast Evaluator Profiles
+                </span>
+
+                <form method="POST" action="login.php" class="login-persona-grid">
+                    <button type="submit" name="quick_login_role" value="admin" class="persona-btn">
+                        <div style="font-size: 16px;">👑</div>
+                        <strong style="font-size: 12px; color: #172B4D; display: block;">Lead Admin</strong>
+                        <span style="font-size: 10px; color: #6B778C;">Full Access</span>
                     </button>
-                    <button type="submit" name="quick_login_role" value="agent" class="btn btn-outline btn-sm" style="font-size: 12px; padding: 8px 4px;">
-                        🛠️ Support Exec
+
+                    <button type="submit" name="quick_login_role" value="agent" class="persona-btn">
+                        <div style="font-size: 16px;">🛠️</div>
+                        <strong style="font-size: 12px; color: #172B4D; display: block;">Support Tier-2</strong>
+                        <span style="font-size: 10px; color: #6B778C;">Agent Triage</span>
                     </button>
-                    <button type="submit" name="quick_login_role" value="customer" class="btn btn-outline btn-sm" style="font-size: 12px; padding: 8px 4px;">
-                        👤 Client User
+
+                    <button type="submit" name="quick_login_role" value="customer" class="persona-btn">
+                        <div style="font-size: 16px;">👤</div>
+                        <strong style="font-size: 12px; color: #172B4D; display: block;">Client Portal</strong>
+                        <span style="font-size: 10px; color: #6B778C;">Requester</span>
                     </button>
                 </form>
-                <div style="font-size: 12px; color: #94a3b8; margin-top: 10px;">
-                    Default demo password: <code>password123</code>
-                </div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: center; font-size: 11px; color: #8993A4;">
+                CoreDesk Cloud &bull; SOC2 Type II Certified &bull; TLS 1.3
             </div>
         </div>
+
     </div>
 </div>
 

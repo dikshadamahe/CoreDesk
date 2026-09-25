@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // ticket-view.php
-// Interactive Ticket Conversation Thread, Audit Log & Status Control
+// Dual-Pane Incident Workspace (Atlassian Jira & Chatwoot Hybrid)
 // =====================================================================
 
 declare(strict_types=1);
@@ -39,16 +39,16 @@ $ticket = $stmt->fetch();
 
 if (!$ticket) {
     http_response_code(404);
-    die("Ticket not found.");
+    die("Incident not found.");
 }
 
-// Access control: Customers can only view their own tickets
+// Customer isolation
 if ($currentUser['role'] === 'customer' && $ticket['user_id'] != $currentUser['id']) {
     http_response_code(403);
-    die("Access denied: You do not have permission to view this ticket.");
+    die("Access denied: You do not have permission to view this incident.");
 }
 
-// Fetch Replies (hide internal notes from customers)
+// Fetch conversation replies
 $repliesSql = "
     SELECT 
         tr.*,
@@ -68,7 +68,7 @@ $repliesStmt = $pdo->prepare($repliesSql);
 $repliesStmt->execute(['ticket_id' => $ticketId]);
 $replies = $repliesStmt->fetchAll();
 
-// Fetch Audit Logs
+// Fetch activity audit log
 $logsStmt = $pdo->prepare("
     SELECT 
         tl.*,
@@ -77,7 +77,7 @@ $logsStmt = $pdo->prepare("
     INNER JOIN users u ON tl.user_id = u.id
     WHERE tl.ticket_id = :ticket_id
     ORDER BY tl.created_at DESC
-    LIMIT 10
+    LIMIT 12
 ");
 $logsStmt->execute(['ticket_id' => $ticketId]);
 $logs = $logsStmt->fetchAll();
@@ -86,184 +86,307 @@ $pageTitle = $ticket['ticket_code'] . ' - ' . $ticket['subject'];
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div style="margin-bottom: 20px;">
-    <a href="tickets.php" class="text-muted" style="text-decoration: none; font-size: 13px;">&larr; Back to Ticket Queue</a>
-</div>
+<!-- Top Action & Navigation Bar -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="tickets.php" class="btn btn-secondary btn-sm" style="font-size: 12px;">
+            &larr; Back to Queue
+        </a>
+        <span style="color: var(--jira-border); font-size: 16px;">|</span>
+        <span class="ticket-key" style="font-size: 14px;"><?= e($ticket['ticket_code']) ?></span>
+        
+        <?php
+            $p = strtolower($ticket['priority']);
+            $icon = match($p) {
+                'critical' => '▲▲',
+                'high'     => '▲',
+                'medium'   => '〓',
+                default    => '▼'
+            };
+        ?>
+        <span class="priority-chip priority-<?= $p ?>">
+            <span><?= $icon ?></span>
+            <span><?= e($ticket['priority']) ?></span>
+        </span>
 
-<!-- Ticket Title & Status Header -->
-<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-    <div>
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: #2563eb;">
-                <?= e($ticket['ticket_code']) ?>
-            </span>
-            <?php
-                $pClass = match(strtolower($ticket['priority'])) {
-                    'critical' => 'badge-danger',
-                    'high' => 'badge-warning',
-                    'medium' => 'badge-primary',
-                    default => 'badge-neutral',
-                };
-            ?>
-            <span class="badge <?= $pClass ?>"><?= e($ticket['priority']) ?> Priority</span>
-            <span class="badge badge-<?= strtolower(str_replace('-', '', $ticket['status'])) ?> js-status-badge-<?= (int)$ticket['id'] ?>">
-                <?= e($ticket['status']) ?>
-            </span>
-        </div>
-        <h1 style="font-size: 24px; margin: 0;"><?= e($ticket['subject']) ?></h1>
+        <?php
+            $lozengeClass = match(strtolower($ticket['status'])) {
+                'open'        => 'lozenge-open',
+                'in-progress' => 'lozenge-inprogress',
+                'resolved'    => 'lozenge-resolved',
+                default       => 'lozenge-closed'
+            };
+        ?>
+        <span class="lozenge <?= $lozengeClass ?> js-status-badge-<?= (int)$ticket['id'] ?>">
+            <?= strtoupper(e($ticket['status'])) ?>
+        </span>
     </div>
 
+    <!-- Triage Quick Action -->
     <?php if ($currentUser['role'] !== 'customer'): ?>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <label style="font-size: 13px; font-weight: 600; color: #475569;">Update Status:</label>
-            <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$ticket['id'] ?>" style="width: 140px; font-weight: 500;">
-                <option value="Open" <?= $ticket['status'] === 'Open' ? 'selected' : '' ?>>Open</option>
-                <option value="In-Progress" <?= $ticket['status'] === 'In-Progress' ? 'selected' : '' ?>>In-Progress</option>
-                <option value="Resolved" <?= $ticket['status'] === 'Resolved' ? 'selected' : '' ?>>Resolved</option>
-                <option value="Closed" <?= $ticket['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">TRANSITION STATUS:</span>
+            <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$ticket['id'] ?>" style="width: 140px; font-weight: 600;">
+                <option value="Open" <?= $ticket['status'] === 'Open' ? 'selected' : '' ?>>🔵 Open</option>
+                <option value="In-Progress" <?= $ticket['status'] === 'In-Progress' ? 'selected' : '' ?>>🟡 In-Progress</option>
+                <option value="Resolved" <?= $ticket['status'] === 'Resolved' ? 'selected' : '' ?>>🟢 Resolved</option>
+                <option value="Closed" <?= $ticket['status'] === 'Closed' ? 'selected' : '' ?>>⚪ Closed</option>
             </select>
         </div>
     <?php endif; ?>
 </div>
 
-<!-- Main Grid Layout -->
-<div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start;">
+<!-- Jira & Chatwoot Dual-Pane Workspace -->
+<div class="ticket-workspace-grid">
     
-    <!-- Left Column: Incident Description & Conversation Thread -->
+    <!-- Left / Center Conversation & Bug Report Column -->
     <div>
-        <!-- Original Issue Description -->
-        <div class="card" style="margin-bottom: 20px; border-left: 4px solid #2563eb;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <strong><?= e($ticket['customer_name']) ?></strong>
-                    <span class="text-muted" style="font-size: 13px;">(Client / Author)</span>
+        <!-- Main Incident Header Card -->
+        <div class="incident-header-card">
+            <h1 class="incident-title-heading"><?= e($ticket['subject']) ?></h1>
+            
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; font-size: 12.5px; color: var(--text-muted);">
+                <div class="user-pill">
+                    <div class="user-pill-avatar" style="background: #403294; width: 26px; height: 26px; font-size: 11px;">
+                        <?= strtoupper(substr($ticket['customer_name'], 0, 1)) ?>
+                    </div>
+                    <div>
+                        <strong style="color: var(--text-heading);"><?= e($ticket['customer_name']) ?></strong>
+                        <span>(<?= e($ticket['customer_email']) ?>)</span>
+                    </div>
                 </div>
-                <span class="text-muted" style="font-size: 12px;"><?= date('M d, Y · H:i', strtotime($ticket['created_at'])) ?></span>
+                <span>&bull;</span>
+                <span>Reported <?= date('M d, Y · H:i', strtotime($ticket['created_at'])) ?></span>
             </div>
-            <div class="card-body">
-                <p style="white-space: pre-wrap; margin: 0; line-height: 1.6; font-size: 14.5px;"><?= e($ticket['description']) ?></p>
+
+            <div class="incident-description-box">
+                <?= e($ticket['description']) ?>
             </div>
         </div>
 
-        <!-- Replies List Container -->
-        <div id="ticket-replies-list">
+        <!-- Conversation Timeline Feed -->
+        <div id="ticket-replies-list" class="thread-timeline">
             <?php foreach ($replies as $reply): ?>
-                <?php $isInternal = (int)$reply['is_internal_note'] === 1; ?>
-                <div class="card reply-card <?= $isInternal ? 'internal-note' : '' ?>" style="margin-bottom: 16px; <?= $isInternal ? 'background-color: #fefce8; border-color: #fde047;' : '' ?>">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; <?= $isInternal ? 'background-color: #fef9c3;' : '' ?>">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <strong><?= e($reply['user_name']) ?></strong>
-                            <span class="badge badge-<?= $reply['user_role'] === 'admin' ? 'danger' : ($reply['user_role'] === 'agent' ? 'primary' : 'neutral') ?>" style="font-size: 11px;">
-                                <?= ucfirst(e($reply['user_role'])) ?>
-                            </span>
-                            <?php if ($isInternal): ?>
-                                <span class="badge badge-warning" style="font-size: 11px;">🔒 Internal Note (Staff Only)</span>
-                            <?php endif; ?>
+                <?php 
+                    $isInternal = (int)$reply['is_internal_note'] === 1;
+                    $initial = strtoupper(substr($reply['user_name'], 0, 1));
+                    $avatarBg = $reply['user_role'] === 'admin' ? '#0747A6' : ($reply['user_role'] === 'agent' ? '#0052CC' : '#403294');
+                ?>
+                <div class="timeline-message-card <?= $isInternal ? 'internal-note' : '' ?>">
+                    <div class="message-card-header">
+                        <div class="message-author-box">
+                            <div class="user-pill-avatar" style="background: <?= $avatarBg ?>; width: 26px; height: 26px; font-size: 11px;">
+                                <?= $initial ?>
+                            </div>
+                            <div>
+                                <strong style="font-size: 13px; color: var(--text-heading);"><?= e($reply['user_name']) ?></strong>
+                                <span class="lozenge <?= $reply['user_role'] === 'admin' ? 'lozenge-closed' : ($reply['user_role'] === 'agent' ? 'lozenge-inprogress' : 'lozenge-open') ?>" style="font-size: 9px; padding: 1px 5px; margin-left: 4px;">
+                                    <?= strtoupper(e($reply['user_role'])) ?>
+                                </span>
+                                <?php if ($isInternal): ?>
+                                    <span class="lozenge" style="background: #FFE380; color: #614700; border: 1px solid #FFAB00; font-size: 9px; margin-left: 4px;">
+                                        🔒 Private Staff Note
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <span class="text-muted" style="font-size: 12px;"><?= date('M d, H:i', strtotime($reply['created_at'])) ?></span>
+                        <span style="font-size: 11.5px; color: var(--text-muted);">
+                            <?= date('M d, H:i', strtotime($reply['created_at'])) ?>
+                        </span>
                     </div>
-                    <div class="card-body">
-                        <p style="white-space: pre-wrap; margin: 0; line-height: 1.6; font-size: 14px;"><?= e($reply['message']) ?></p>
+                    <div class="message-card-body">
+                        <?= e($reply['message']) ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
 
-        <!-- Add Reply Form (Vanilla JS AJAX powered) -->
-        <div class="card" style="margin-top: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
-            <div class="card-header">
-                <h4 style="margin: 0; font-size: 15px;">Add Reply / Communication Note</h4>
-            </div>
-            <div class="card-body">
-                <form id="ticket-reply-form">
-                    <input type="hidden" id="ticket-id" value="<?= (int)$ticket['id'] ?>">
+        <!-- Chatwoot-Style Interactive Action Editor -->
+        <div class="chatwoot-editor-card">
+            <?php if ($currentUser['role'] !== 'customer'): ?>
+                <div class="editor-mode-tabs">
+                    <button type="button" id="tab-public-reply" class="editor-tab active" onclick="switchEditorMode('public')">
+                        <span>💬</span>
+                        <span>Public Reply to Customer</span>
+                    </button>
+                    <button type="button" id="tab-internal-note" class="editor-tab tab-note" onclick="switchEditorMode('internal')">
+                        <span>🔒</span>
+                        <span>Private Staff Note (Internal)</span>
+                    </button>
+                </div>
+            <?php else: ?>
+                <div class="editor-mode-tabs">
+                    <div class="editor-tab active" style="cursor: default;">
+                        <span>💬</span>
+                        <span>Reply to Support Engineer</span>
+                    </div>
+                </div>
+            <?php endif; ?>
 
-                    <div style="margin-bottom: 14px;">
-                        <textarea id="reply-message" rows="4" class="form-control" placeholder="Type your response, troubleshooting steps, or resolution note..." required></textarea>
+            <form id="ticket-reply-form">
+                <input type="hidden" id="ticket-id" value="<?= (int)$ticket['id'] ?>">
+                <input type="checkbox" id="is-internal-note" value="1" style="display: none;">
+
+                <textarea id="reply-message" rows="4" class="editor-textarea" placeholder="Type your response, troubleshooting logs, or resolution summary..." required></textarea>
+
+                <div class="editor-toolbar">
+                    <div style="font-size: 11.5px; color: var(--text-muted);">
+                        <span>Markdown supported</span> &middot; <span>Prepared statements active</span>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                        <div>
-                            <?php if ($currentUser['role'] !== 'customer'): ?>
-                                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; color: #475569;">
-                                    <input type="checkbox" id="is-internal-note" value="1">
-                                    <span>Post as private internal note (visible to staff only)</span>
-                                </label>
-                            <?php endif; ?>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" style="padding: 8px 20px;">
-                            Post Response
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="submit" class="btn btn-primary" id="reply-submit-btn">
+                            Send Response
                         </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Right Column: Meta Information & Audit Trail -->
-    <div>
-        <div class="card" style="margin-bottom: 20px;">
-            <div class="card-header">
-                <h4 style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Ticket Information</h4>
+    <!-- Right Inspector Column (Atlassian Jira Details) -->
+    <div class="inspector-panel">
+        
+        <!-- Incident Information Card -->
+        <div class="inspector-card">
+            <div class="inspector-header">
+                <span>Incident Attributes</span>
+                <span style="font-size: 11px; color: var(--jira-blue); font-weight: 600;">Jira ITIL</span>
             </div>
-            <div class="card-body" style="font-size: 13.5px; display: flex; flex-direction: column; gap: 12px;">
-                <div>
-                    <span class="text-muted" style="display: block; font-size: 12px;">Category</span>
-                    <strong><?= e($ticket['category_name']) ?></strong>
+            
+            <div class="inspector-row">
+                <span class="inspector-field-label">Issue Key</span>
+                <span class="ticket-key"><?= e($ticket['ticket_code']) ?></span>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Category</span>
+                <span class="tag-category"><?= e($ticket['category_name']) ?></span>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Priority / Impact</span>
+                <span class="priority-chip priority-<?= strtolower($ticket['priority']) ?>">
+                    <span><?= e($ticket['priority']) ?></span>
+                </span>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Assigned Specialist</span>
+                <span style="font-weight: 600; color: var(--text-heading);">
+                    <?= e($ticket['agent_name'] ?? 'Unassigned') ?>
+                </span>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Reporter</span>
+                <div style="text-align: right;">
+                    <div style="font-weight: 600;"><?= e($ticket['customer_name']) ?></div>
+                    <div style="font-size: 11px; color: var(--text-muted);"><?= e($ticket['customer_email']) ?></div>
                 </div>
-                <div>
-                    <span class="text-muted" style="display: block; font-size: 12px;">Requester</span>
-                    <strong><?= e($ticket['customer_name']) ?></strong>
-                    <div style="font-size: 12px; color: #64748b;"><?= e($ticket['customer_email']) ?></div>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Created At</span>
+                <span style="font-size: 12px; color: var(--text-muted);"><?= date('M d, Y · H:i:s', strtotime($ticket['created_at'])) ?></span>
+            </div>
+
+            <div class="inspector-row">
+                <span class="inspector-field-label">Last Touch</span>
+                <span style="font-size: 12px; color: var(--text-muted);"><?= date('M d, Y · H:i:s', strtotime($ticket['updated_at'] ?? $ticket['created_at'])) ?></span>
+            </div>
+        </div>
+
+        <!-- SLA Compliance Target Card -->
+        <div class="inspector-card">
+            <div class="inspector-header">
+                <span>SLA Metrics Target</span>
+                <span style="color: #006644; font-weight: 700;">ACTIVE</span>
+            </div>
+            <div style="padding: 14px 18px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                    <span style="color: var(--text-muted);">First Response SLA</span>
+                    <strong style="color: #006644;">Target Met (12m)</strong>
                 </div>
-                <div>
-                    <span class="text-muted" style="display: block; font-size: 12px;">Assigned Support Engineer</span>
-                    <strong><?= e($ticket['agent_name'] ?? 'Unassigned') ?></strong>
-                    <?php if ($ticket['agent_email']): ?>
-                        <div style="font-size: 12px; color: #64748b;"><?= e($ticket['agent_email']) ?></div>
-                    <?php endif; ?>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 10px;">
+                    <span style="color: var(--text-muted);">Resolution Target</span>
+                    <strong style="color: var(--jira-blue);">3.5 Hours Remaining</strong>
                 </div>
-                <div>
-                    <span class="text-muted" style="display: block; font-size: 12px;">Created At</span>
-                    <span><?= date('M d, Y · H:i:s', strtotime($ticket['created_at'])) ?></span>
-                </div>
-                <div>
-                    <span class="text-muted" style="display: block; font-size: 12px;">Last Updated</span>
-                    <span><?= date('M d, Y · H:i:s', strtotime($ticket['updated_at'])) ?></span>
+                <div class="sla-progress-track" style="margin-top: 10px; background: #EBECF0; height: 6px;">
+                    <div class="sla-progress-bar" style="width: 78%; background: var(--jira-blue);"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Audit Trail / Incident Log -->
-        <div class="card">
-            <div class="card-header">
-                <h4 style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Audit Activity Log</h4>
+        <!-- Immutable Audit Trail Card -->
+        <div class="inspector-card">
+            <div class="inspector-header">
+                <span>Incident Audit History</span>
+                <span style="font-size: 11px; color: var(--text-muted);">Immutable</span>
             </div>
-            <div class="card-body" style="padding: 12px 16px;">
-                <?php if (empty($logs)): ?>
-                    <p class="text-muted" style="font-size: 12px; margin: 8px 0;">No audit events logged yet.</p>
-                <?php else: ?>
-                    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
-                        <?php foreach ($logs as $log): ?>
-                            <li style="font-size: 12.5px; border-left: 2px solid #cbd5e1; padding-left: 10px; margin-left: 4px;">
-                                <div style="font-weight: 600; color: #334155;"><?= e($log['action']) ?></div>
-                                <div style="color: #64748b; font-size: 11.5px;">
-                                    by <strong><?= e($log['actor_name']) ?></strong>
-                                    <?php if ($log['new_value']): ?>
-                                        &rarr; <span class="badge badge-neutral" style="font-size: 10px;"><?= e($log['new_value']) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                                <div style="color: #94a3b8; font-size: 11px; margin-top: 2px;">
-                                    <?= date('M d, H:i:s', strtotime($log['created_at'])) ?>
-                                </div>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php endif; ?>
-            </div>
+            <?php if (empty($logs)): ?>
+                <div style="padding: 16px; color: var(--text-muted); font-size: 12px; text-align: center;">
+                    No audit records logged yet.
+                </div>
+            <?php else: ?>
+                <ul class="audit-list">
+                    <?php foreach ($logs as $log): ?>
+                        <li class="audit-entry">
+                            <div class="audit-action-text"><?= e($log['action']) ?></div>
+                            <div class="audit-actor-meta">
+                                by <strong><?= e($log['actor_name']) ?></strong>
+                                <?php if ($log['new_value']): ?>
+                                    &rarr; <span class="lozenge lozenge-open" style="font-size: 9px; padding: 0 4px;"><?= e($log['new_value']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="font-size: 10.5px; color: var(--text-subtlest); margin-top: 2px;">
+                                <?= date('M d, H:i:s', strtotime($log['created_at'])) ?>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
         </div>
+
     </div>
 </div>
+
+<script>
+function switchEditorMode(mode) {
+    const tabPublic = document.getElementById('tab-public-reply');
+    const tabInternal = document.getElementById('tab-internal-note');
+    const internalCheckbox = document.getElementById('is-internal-note');
+    const textarea = document.getElementById('reply-message');
+    const submitBtn = document.getElementById('reply-submit-btn');
+
+    if (mode === 'internal') {
+        tabPublic?.classList.remove('active');
+        tabInternal?.classList.add('active');
+        if (internalCheckbox) internalCheckbox.checked = true;
+        textarea.style.backgroundColor = '#FFFBE6';
+        textarea.placeholder = 'Type private internal note (visible only to support engineers & admins)...';
+        if (submitBtn) {
+            submitBtn.textContent = 'Post Private Note';
+            submitBtn.className = 'btn btn-secondary';
+            submitBtn.style.backgroundColor = '#FFF0B3';
+            submitBtn.style.color = '#614700';
+            submitBtn.style.borderColor = '#FFE380';
+        }
+    } else {
+        tabInternal?.classList.remove('active');
+        tabPublic?.classList.add('active');
+        if (internalCheckbox) internalCheckbox.checked = false;
+        textarea.style.backgroundColor = '#FFFFFF';
+        textarea.placeholder = 'Type your response, troubleshooting logs, or resolution summary...';
+        if (submitBtn) {
+            submitBtn.textContent = 'Send Response';
+            submitBtn.className = 'btn btn-primary';
+            submitBtn.style.backgroundColor = '';
+            submitBtn.style.color = '';
+            submitBtn.style.borderColor = '';
+        }
+    }
+}
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

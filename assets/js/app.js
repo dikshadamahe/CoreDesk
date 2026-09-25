@@ -1,9 +1,11 @@
 /**
- * CoreDesk — Web Helpdesk & Support Ticketing System
- * Pure Vanilla JavaScript Client Logic (Zero external dependencies/frameworks)
+ * CoreDesk — Enterprise Service Management Client Engine
+ * Pure Vanilla JavaScript ES6+ (Zero external dependencies)
+ * Features: Fetch API, Keyboard Shortcuts (Cmd+K), Real-time Filter, Toast Engine
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    initKeyboardShortcuts();
     initQuickStatusHandlers();
     initReplyForm();
     initSearchFilter();
@@ -11,32 +13,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Helper: Display floating toast alerts
+ * Enterprise Toast Notification Engine
  */
 function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        container.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px;';
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'}`;
-    toast.style.cssText = 'min-width:280px; box-shadow:0 8px 24px rgba(0,0,0,0.15); animation:fadeIn 0.3s ease;';
-    toast.innerHTML = `<strong>${type === 'error' ? 'Notice:' : 'Success:'}</strong> ${escapeHtml(message)}`;
+    toast.className = `toast-alert toast-${type === 'error' ? 'error' : 'success'}`;
+    const icon = type === 'error' ? '⚠️' : '✅';
+    toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
     
     container.appendChild(toast);
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.4s ease';
-        setTimeout(() => toast.remove(), 400);
-    }, 3500);
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
 /**
- * XSS escaping utility
+ * XSS escaping helper
  */
 function escapeHtml(str) {
     if (!str) return '';
@@ -46,12 +48,38 @@ function escapeHtml(str) {
 }
 
 /**
- * AJAX Ticket Status Updater (Inline from tables or detail headers)
+ * Global Keyboard Shortcut: Cmd/Ctrl + K focuses search bar
+ */
+function initKeyboardShortcuts() {
+    window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            const searchBar = document.getElementById('global-search-bar') || document.getElementById('table-search-input');
+            if (searchBar) {
+                searchBar.focus();
+                searchBar.select();
+            }
+        }
+    });
+
+    const globalSearch = document.getElementById('global-search-bar');
+    if (globalSearch) {
+        globalSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const query = globalSearch.value.trim();
+                window.location.href = `tickets.php?q=${encodeURIComponent(query)}`;
+            }
+        });
+    }
+}
+
+/**
+ * AJAX Ticket Status Transition Handler
  */
 function initQuickStatusHandlers() {
     const statusSelects = document.querySelectorAll('.js-status-select');
     statusSelects.forEach(select => {
-        select.addEventListener('change', async (e) => {
+        select.addEventListener('change', async () => {
             const ticketId = select.dataset.ticketId;
             const newStatus = select.value;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -60,9 +88,7 @@ function initQuickStatusHandlers() {
             try {
                 const response = await fetch('api/update_status.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         ticket_id: parseInt(ticketId, 10),
                         status: newStatus,
@@ -73,20 +99,22 @@ function initQuickStatusHandlers() {
 
                 const data = await response.json();
                 if (response.ok && data.success) {
-                    showToast(`Ticket status updated to ${newStatus}`);
-                    // Update badge color in DOM if applicable
-                    const badge = document.querySelector(`.js-status-badge-${ticketId}`);
-                    if (badge) {
-                        badge.className = `badge badge-${newStatus.toLowerCase().replace('-', '')} js-status-badge-${ticketId}`;
-                        badge.textContent = newStatus;
+                    showToast(`Status updated to ${newStatus}`);
+                    
+                    // Update Lozenge in DOM if present
+                    const lozenge = document.querySelector(`.js-status-badge-${ticketId}`);
+                    if (lozenge) {
+                        const cleanStatus = newStatus.toLowerCase().replace('-', '');
+                        lozenge.className = `lozenge lozenge-${cleanStatus} js-status-badge-${ticketId}`;
+                        lozenge.textContent = newStatus.toUpperCase();
                     }
                     refreshMetrics();
                 } else {
-                    showToast(data.error || 'Failed to update ticket status', 'error');
+                    showToast(data.error || 'Failed to update status', 'error');
                 }
             } catch (err) {
-                console.error('Status update failed:', err);
-                showToast('Network error while updating ticket status', 'error');
+                console.error('Status transition error:', err);
+                showToast('Network error while updating incident status', 'error');
             } finally {
                 select.disabled = false;
             }
@@ -95,7 +123,7 @@ function initQuickStatusHandlers() {
 }
 
 /**
- * Ticket Reply Form Handler (Asynchronous Fetch submission)
+ * Asynchronous Ticket Reply & Internal Note Submission
  */
 function initReplyForm() {
     const replyForm = document.getElementById('ticket-reply-form');
@@ -103,7 +131,7 @@ function initReplyForm() {
 
     replyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const submitBtn = replyForm.querySelector('button[type="submit"]');
+        const submitBtn = document.getElementById('reply-submit-btn') || replyForm.querySelector('button[type="submit"]');
         const messageInput = document.getElementById('reply-message');
         const internalCheckbox = document.getElementById('is-internal-note');
         const ticketIdInput = document.getElementById('ticket-id');
@@ -111,7 +139,7 @@ function initReplyForm() {
 
         const message = messageInput.value.trim();
         if (!message) {
-            showToast('Please type a reply message.', 'error');
+            showToast('Please type a response before submitting.', 'error');
             return;
         }
 
@@ -120,10 +148,11 @@ function initReplyForm() {
         submitBtn.textContent = 'Posting...';
 
         try {
+            const isInternal = internalCheckbox && internalCheckbox.checked ? 1 : 0;
             const payload = {
                 ticket_id: parseInt(ticketIdInput.value, 10),
                 message: message,
-                is_internal_note: internalCheckbox ? (internalCheckbox.checked ? 1 : 0) : 0,
+                is_internal_note: isInternal,
                 csrf_token: csrfToken
             };
 
@@ -135,18 +164,17 @@ function initReplyForm() {
 
             const data = await res.json();
             if (res.ok && data.success) {
-                showToast('Reply published successfully');
+                showToast(isInternal ? 'Private staff note saved' : 'Response dispatched to customer');
                 messageInput.value = '';
-                if (internalCheckbox) internalCheckbox.checked = false;
 
-                // Append new reply directly into DOM thread
+                // Append newly authored reply directly to timeline
                 appendReplyToThread(data.reply);
             } else {
-                showToast(data.error || 'Could not post reply', 'error');
+                showToast(data.error || 'Could not post response', 'error');
             }
         } catch (err) {
-            console.error(err);
-            showToast('Network error while posting reply', 'error');
+            console.error('Reply dispatch failure:', err);
+            showToast('Network error while posting response', 'error');
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
@@ -158,29 +186,39 @@ function appendReplyToThread(reply) {
     const threadContainer = document.getElementById('ticket-replies-list');
     if (!threadContainer) return;
 
-    const div = document.createElement('div');
-    const isInternal = reply.is_internal_note == 1;
-    div.className = `card reply-card ${isInternal ? 'internal-note' : ''}`;
-    div.style.marginBottom = '16px';
-    div.innerHTML = `
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <strong>${escapeHtml(reply.user_name || 'You')}</strong>
-                <span class="badge badge-neutral" style="font-size:11px;">${escapeHtml(reply.user_role || 'Agent')}</span>
-                ${isInternal ? '<span class="badge badge-warning" style="font-size:11px;">🔒 Internal Note</span>' : ''}
+    const isInternal = (reply.is_internal_note == 1);
+    const initial = (reply.user_name || 'You').charAt(0).toUpperCase();
+    const avatarBg = reply.user_role === 'admin' ? '#0747A6' : (reply.user_role === 'agent' ? '#0052CC' : '#403294');
+
+    const card = document.createElement('div');
+    card.className = `timeline-message-card ${isInternal ? 'internal-note' : ''}`;
+    card.innerHTML = `
+        <div class="message-card-header">
+            <div class="message-author-box">
+                <div class="user-pill-avatar" style="background: ${avatarBg}; width: 26px; height: 26px; font-size: 11px;">
+                    ${initial}
+                </div>
+                <div>
+                    <strong style="font-size: 13px; color: var(--text-heading);">${escapeHtml(reply.user_name || 'You')}</strong>
+                    <span class="lozenge lozenge-inprogress" style="font-size: 9px; padding: 1px 5px; margin-left: 4px;">
+                        ${escapeHtml((reply.user_role || 'Agent').toUpperCase())}
+                    </span>
+                    ${isInternal ? '<span class="lozenge" style="background: #FFE380; color: #614700; border: 1px solid #FFAB00; font-size: 9px; margin-left: 4px;">🔒 Private Staff Note</span>' : ''}
+                </div>
             </div>
-            <span class="text-muted" style="font-size:12px;">Just now</span>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Just now</span>
         </div>
-        <div class="card-body">
-            <p style="white-space:pre-wrap; margin:0;">${escapeHtml(reply.message)}</p>
+        <div class="message-card-body">
+            ${escapeHtml(reply.message)}
         </div>
     `;
-    threadContainer.appendChild(div);
-    div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    threadContainer.appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /**
- * Real-time Client-Side Search Filtering on Table
+ * Real-time Client-Side Search Filtering on Queue Table
  */
 function initSearchFilter() {
     const searchInput = document.getElementById('table-search-input');
@@ -198,11 +236,11 @@ function initSearchFilter() {
 }
 
 /**
- * Fetch Live Dashboard Turnaround Metrics
+ * Live KPI Polling
  */
 function initLiveMetrics() {
-    const metricsContainer = document.getElementById('dashboard-metrics');
-    if (!metricsContainer) return;
+    const openEl = document.getElementById('metric-open');
+    if (!openEl) return;
     refreshMetrics();
 }
 
@@ -222,6 +260,6 @@ async function refreshMetrics() {
         if (resolvedEl) resolvedEl.textContent = metrics.resolved_count ?? 0;
         if (criticalEl) criticalEl.textContent = metrics.critical_count ?? 0;
     } catch (e) {
-        console.warn('Metrics polling error', e);
+        console.warn('Metrics refresh failed', e);
     }
 }
