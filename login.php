@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // login.php
-// Enterprise Identity & Access Management (Atlassian Cloud SSO Aesthetic)
+// Clean SaaS Authentication Portal (Dot Grid Background & Vibrant Blue)
 // =====================================================================
 
 declare(strict_types=1);
@@ -9,7 +9,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/database.php';
 
-// Redirect if already authenticated
 if (isLoggedIn()) {
     header('Location: index.php');
     exit;
@@ -35,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($email)) {
-        $error = 'Please provide an authorized corporate email.';
+        $error = 'Please enter an email address.';
     } else {
         $stmt = $pdo->prepare("SELECT id, name, email, password_hash, role FROM users WHERE email = :email LIMIT 1");
         $stmt->execute(['email' => $email]);
@@ -51,92 +50,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit;
         } else {
-            $error = 'Invalid corporate credentials. Click one of the demo profile switchers below.';
+            $error = 'Invalid credentials. Use one of the fast demo profile buttons below.';
         }
     }
 }
 
-$isAuthPage = true;
-$pageTitle = 'Enterprise Sign In';
-require_once __DIR__ . '/includes/header.php';
+$csrfToken = generateCsrfToken();
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | CoreDesk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px;">
 
-<div class="mnc-login-wrapper">
-    <div class="login-glass-card">
-        
-        <div class="login-card-header">
-            <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: linear-gradient(135deg, #0052CC, #0747A6); border-radius: 12px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,82,204,0.35);">
-                <span style="font-size: 24px; color: #FFFFFF;">⚡</span>
-            </div>
-            <h2 style="font-size: 22px; font-weight: 700; color: #172B4D; margin-bottom: 4px;">Sign in to CoreDesk</h2>
-            <p style="color: #6B778C; font-size: 13.5px; margin: 0;">Enterprise Incident Management &middot; Jira Standard</p>
+<div style="width: 100%; max-width: 460px;">
+    
+    <div style="text-align: center; margin-bottom: 24px;">
+        <a href="login.php" class="brand-wrap" style="justify-content: center; font-size: 30px; margin-bottom: 12px; display: inline-flex;">
+            <span>Core<span class="brand-highlight">Desk</span></span>
+        </a>
+        <div class="hero-pill" style="margin-bottom: 0;">
+            <span class="hero-pill-dot"></span>
+            <span>Built on Core PHP, MySQL, vanilla JS</span>
         </div>
+    </div>
 
-        <div style="padding: 28px 32px 32px;">
-            <?php if ($error): ?>
-                <div class="toast-alert toast-error" style="position: static; margin-bottom: 20px; width: 100%;">
-                    <?= e($error) ?>
-                </div>
-            <?php endif; ?>
+    <div class="card" style="box-shadow: var(--shadow-elevated); padding: 32px;">
+        <h2 style="font-size: 22px; font-weight: 800; color: var(--text-heading); margin-bottom: 6px; text-align: center;">
+            Sign in to your account
+        </h2>
+        <p style="font-size: 13.5px; color: var(--text-muted); text-align: center; margin-bottom: 24px;">
+            Enter your credentials or pick a demo persona
+        </p>
 
-            <form method="POST" action="login.php" style="display: flex; flex-direction: column; gap: 16px;">
+        <?php if ($error): ?>
+            <div class="toast-alert toast-error" style="position: static; margin-bottom: 20px; width: 100%;">
+                <?= e($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="login.php" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+
+            <div>
+                <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
+                    Email Address
+                </label>
+                <input type="email" name="email" class="form-control" placeholder="admin@coredesk.local" required autofocus>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
+                    Password
+                </label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 11px; margin-top: 4px;">
+                Sign In
+            </button>
+        </form>
+
+        <!-- 1-Click Persona Quick Switcher -->
+        <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-subtle); text-align: center;">
+            <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 12px;">
+                ⚡ 1-Click Fast Demo Login
+            </span>
+
+            <form method="POST" action="login.php" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
                 <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
-
-                <div>
-                    <label style="display: block; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6B778C; margin-bottom: 6px; letter-spacing: 0.04em;">
-                        Work Email Address
-                    </label>
-                    <input type="email" name="email" class="form-control" placeholder="user@coredesk.local" required autofocus style="background: #FFFFFF;">
-                </div>
-
-                <div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <label style="font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6B778C; letter-spacing: 0.04em;">
-                            Password
-                        </label>
-                        <span style="font-size: 12px; color: var(--jira-blue);">SSO Active</span>
-                    </div>
-                    <input type="password" name="password" class="form-control" placeholder="••••••••" required style="background: #FFFFFF;">
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="padding: 10px; width: 100%; margin-top: 4px; font-size: 14px;">
-                    Log In to Workspace
+                <button type="submit" name="quick_login_role" value="admin" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
+                    <span style="font-size: 16px;">👑</span>
+                    <strong style="font-size: 12px;">Admin</strong>
+                </button>
+                <button type="submit" name="quick_login_role" value="agent" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
+                    <span style="font-size: 16px;">🛠️</span>
+                    <strong style="font-size: 12px;">Support</strong>
+                </button>
+                <button type="submit" name="quick_login_role" value="customer" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
+                    <span style="font-size: 16px;">👤</span>
+                    <strong style="font-size: 12px;">Client</strong>
                 </button>
             </form>
 
-            <!-- 1-Click Persona Switcher for Evaluators / Recruiters -->
-            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--jira-border-subtle); text-align: center;">
-                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6B778C; letter-spacing: 0.06em; display: block; margin-bottom: 12px;">
-                    ⚡ 1-Click Fast Evaluator Profiles
-                </span>
-
-                <form method="POST" action="login.php" class="login-persona-grid">
-                    <button type="submit" name="quick_login_role" value="admin" class="persona-btn">
-                        <div style="font-size: 16px;">👑</div>
-                        <strong style="font-size: 12px; color: #172B4D; display: block;">Lead Admin</strong>
-                        <span style="font-size: 10px; color: #6B778C;">Full Access</span>
-                    </button>
-
-                    <button type="submit" name="quick_login_role" value="agent" class="persona-btn">
-                        <div style="font-size: 16px;">🛠️</div>
-                        <strong style="font-size: 12px; color: #172B4D; display: block;">Support Tier-2</strong>
-                        <span style="font-size: 10px; color: #6B778C;">Agent Triage</span>
-                    </button>
-
-                    <button type="submit" name="quick_login_role" value="customer" class="persona-btn">
-                        <div style="font-size: 16px;">👤</div>
-                        <strong style="font-size: 12px; color: #172B4D; display: block;">Client Portal</strong>
-                        <span style="font-size: 10px; color: #6B778C;">Requester</span>
-                    </button>
-                </form>
-            </div>
-
-            <div style="margin-top: 20px; text-align: center; font-size: 11px; color: #8993A4;">
-                CoreDesk Cloud &bull; SOC2 Type II Certified &bull; TLS 1.3
+            <div style="font-size: 11.5px; color: var(--text-subtlest); margin-top: 14px;">
+                Default demo password: <code>password123</code>
             </div>
         </div>
-
     </div>
 </div>
 
-<?php require_once __DIR__ . '/includes/footer.php'; ?>
+</body>
+</html>

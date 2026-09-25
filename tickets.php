@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // tickets.php
-// Enterprise Multi-Parameter Service Queue (Jira & Chatwoot Standard)
+// Clean SaaS Ticket Queue Management (CoreDesk Standard)
 // =====================================================================
 
 declare(strict_types=1);
@@ -12,16 +12,13 @@ require_once __DIR__ . '/config/database.php';
 requireLogin();
 $currentUser = getLoggedInUser();
 
-// Fetch Categories for Filter Dropdown
 $categories = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
 
-// Capture Query Filters
 $filterStatus   = trim($_GET['status'] ?? '');
 $filterPriority = trim($_GET['priority'] ?? '');
 $filterCategory = trim($_GET['category'] ?? '');
 $filterSearch   = trim($_GET['q'] ?? '');
 
-// Dynamic Hand-Written Prepared SQL
 $sql = "
     SELECT 
         t.id,
@@ -80,32 +77,32 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll();
 
-$pageTitle = 'Incident Queues & Triage';
+$pageTitle = 'All Tickets';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
     <div>
-        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">Service Queues</h1>
-        <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
-            Filter by SLA severity, triage status, and assigned engineering specialists.
+        <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px;">Support Tickets</h1>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">
+            Filter and inspect requests, assignments, and conversation updates.
         </p>
     </div>
     <a href="create-ticket.php" class="btn btn-primary">
-        + Create Incident
+        + New Ticket
     </a>
 </div>
 
-<!-- Filter Bar Card -->
-<div class="card" style="margin-bottom: 20px; padding: 16px 20px; background: #FFFFFF;">
-    <form method="GET" action="tickets.php" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 100px; gap: 12px; align-items: end;">
+<!-- Filters Card -->
+<div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+    <form method="GET" action="tickets.php" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) 110px; gap: 14px; align-items: end;">
         <div>
-            <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 5px;">Search Keywords</label>
-            <input type="text" name="q" value="<?= e($filterSearch) ?>" class="form-control form-control-sm" placeholder="Search ticket #, trace, client...">
+            <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px;">Search Keyword</label>
+            <input type="text" name="q" value="<?= e($filterSearch) ?>" class="form-control form-control-sm" placeholder="Ticket #, subject, text...">
         </div>
 
         <div>
-            <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 5px;">Status</label>
+            <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px;">Status</label>
             <select name="status" class="form-control form-control-sm">
                 <option value="">All Statuses</option>
                 <option value="Open" <?= $filterStatus === 'Open' ? 'selected' : '' ?>>Open</option>
@@ -116,18 +113,18 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div>
-            <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 5px;">Priority</label>
+            <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px;">Priority</label>
             <select name="priority" class="form-control form-control-sm">
                 <option value="">All Priorities</option>
-                <option value="Critical" <?= $filterPriority === 'Critical' ? 'selected' : '' ?>>▲▲ Critical</option>
-                <option value="High" <?= $filterPriority === 'High' ? 'selected' : '' ?>>▲ High</option>
-                <option value="Medium" <?= $filterPriority === 'Medium' ? 'selected' : '' ?>>〓 Medium</option>
-                <option value="Low" <?= $filterPriority === 'Low' ? 'selected' : '' ?>>▼ Low</option>
+                <option value="Critical" <?= $filterPriority === 'Critical' ? 'selected' : '' ?>>Critical</option>
+                <option value="High" <?= $filterPriority === 'High' ? 'selected' : '' ?>>High</option>
+                <option value="Medium" <?= $filterPriority === 'Medium' ? 'selected' : '' ?>>Medium</option>
+                <option value="Low" <?= $filterPriority === 'Low' ? 'selected' : '' ?>>Low</option>
             </select>
         </div>
 
         <div>
-            <label style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 5px;">Category</label>
+            <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px;">Category</label>
             <select name="category" class="form-control form-control-sm">
                 <option value="">All Categories</option>
                 <?php foreach ($categories as $cat): ?>
@@ -139,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div>
-            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; padding: 7px;">
+            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; padding: 8px;">
                 Filter
             </button>
         </div>
@@ -147,34 +144,34 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <!-- Results Table -->
-<div class="queue-table-container">
-    <div class="queue-table-toolbar">
-        <span style="font-weight: 600; font-size: 13.5px; color: var(--text-heading);">
-            Matching Incidents: <?= count($tickets) ?>
+<div class="table-container">
+    <div class="table-toolbar">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-heading);">
+            Total Inquiries: <?= count($tickets) ?>
         </span>
         <?php if (!empty($filterStatus) || !empty($filterPriority) || !empty($filterCategory) || !empty($filterSearch)): ?>
-            <a href="tickets.php" style="font-size: 12px; color: #DE350B; font-weight: 600; text-decoration: none;">&times; Reset Filters</a>
+            <a href="tickets.php" style="font-size: 12.5px; color: #dc2626; font-weight: 600;">&times; Clear Filters</a>
         <?php endif; ?>
     </div>
 
     <div class="table-responsive">
-        <table class="table-jira">
+        <table class="table-custom">
             <thead>
                 <tr>
-                    <th style="width: 105px;">Key</th>
+                    <th style="width: 100px;">Ticket #</th>
                     <th>Issue Summary &amp; Category</th>
                     <th style="width: 170px;">Requester</th>
                     <th style="width: 110px;">Priority</th>
                     <th style="width: 150px;">Status</th>
-                    <th style="width: 160px;">Assignee</th>
-                    <th style="width: 130px;">Last Activity</th>
-                    <th style="width: 90px; text-align: right;">Action</th>
+                    <th style="width: 150px;">Assigned</th>
+                    <th style="width: 130px;">Updated</th>
+                    <th style="width: 80px; text-align: right;">Action</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($tickets)): ?>
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 48px;" class="text-muted">
+                        <td colspan="8" style="text-align: center; padding: 48px; color: var(--text-muted);">
                             No tickets matching your filter criteria.
                         </td>
                     </tr>
@@ -188,84 +185,51 @@ require_once __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <div>
-                                    <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="ticket-summary-title">
+                                    <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="ticket-title">
                                         <?= e($t['subject']) ?>
                                     </a>
                                 </div>
-                                <div class="ticket-meta-row">
-                                    <span class="tag-category"><?= e($t['category_name']) ?></span>
+                                <div style="display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 12px; color: var(--text-muted);">
+                                    <span class="category-tag"><?= e($t['category_name']) ?></span>
                                     <?php if ($t['reply_count'] > 0): ?>
-                                        <span>💬 <?= (int)$t['reply_count'] ?> replies</span>
+                                        <span>💬 <?= (int)$t['reply_count'] ?></span>
                                     <?php endif; ?>
                                 </div>
                             </td>
                             <td>
-                                <div class="user-pill">
-                                    <div class="user-pill-avatar" style="background: #403294;">
-                                        <?= strtoupper(substr($t['customer_name'], 0, 1)) ?>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; font-size: 12.5px;"><?= e($t['customer_name']) ?></div>
-                                        <div style="font-size: 11px; color: var(--text-muted);"><?= e($t['customer_email']) ?></div>
-                                    </div>
-                                </div>
+                                <div style="font-weight: 600; font-size: 13px;"><?= e($t['customer_name']) ?></div>
+                                <div style="font-size: 11px; color: var(--text-muted);"><?= e($t['customer_email']) ?></div>
                             </td>
                             <td>
-                                <?php
-                                    $p = strtolower($t['priority']);
-                                    $icon = match($p) {
-                                        'critical' => '▲▲',
-                                        'high'     => '▲',
-                                        'medium'   => '〓',
-                                        default    => '▼'
-                                    };
-                                    $chipClass = 'priority-' . $p;
-                                ?>
-                                <span class="priority-chip <?= $chipClass ?>">
-                                    <span style="font-size: 10px;"><?= $icon ?></span>
-                                    <span><?= e($t['priority']) ?></span>
+                                <span class="priority-pill priority-<?= strtolower($t['priority']) ?>">
+                                    <?= e($t['priority']) ?>
                                 </span>
                             </td>
                             <td>
                                 <?php if ($currentUser['role'] === 'customer'): ?>
-                                    <?php
-                                        $lozengeClass = match(strtolower($t['status'])) {
-                                            'open'        => 'lozenge-open',
-                                            'in-progress' => 'lozenge-inprogress',
-                                            'resolved'    => 'lozenge-resolved',
-                                            default       => 'lozenge-closed'
-                                        };
-                                    ?>
-                                    <span class="lozenge <?= $lozengeClass ?>">
-                                        <?= strtoupper(e($t['status'])) ?>
+                                    <span class="status-pill status-<?= strtolower(str_replace('-', '', $t['status'])) ?>">
+                                        <?= e($t['status']) ?>
                                     </span>
                                 <?php else: ?>
-                                    <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$t['id'] ?>" style="font-size: 12px; font-weight: 600; padding: 4px 8px; width: 135px;">
-                                        <option value="Open" <?= $t['status'] === 'Open' ? 'selected' : '' ?>>🔵 Open</option>
-                                        <option value="In-Progress" <?= $t['status'] === 'In-Progress' ? 'selected' : '' ?>>🟡 In-Progress</option>
-                                        <option value="Resolved" <?= $t['status'] === 'Resolved' ? 'selected' : '' ?>>🟢 Resolved</option>
-                                        <option value="Closed" <?= $t['status'] === 'Closed' ? 'selected' : '' ?>>⚪ Closed</option>
+                                    <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$t['id'] ?>" style="font-size: 12px; font-weight: 600; padding: 4px 8px; width: 130px;">
+                                        <option value="Open" <?= $t['status'] === 'Open' ? 'selected' : '' ?>>Open</option>
+                                        <option value="In-Progress" <?= $t['status'] === 'In-Progress' ? 'selected' : '' ?>>In-Progress</option>
+                                        <option value="Resolved" <?= $t['status'] === 'Resolved' ? 'selected' : '' ?>>Resolved</option>
+                                        <option value="Closed" <?= $t['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
                                     </select>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($t['agent_name']): ?>
-                                    <div class="user-pill">
-                                        <div class="user-pill-avatar" style="background: #0052CC;">
-                                            <?= strtoupper(substr($t['agent_name'], 0, 1)) ?>
-                                        </div>
-                                        <span style="font-size: 12.5px; font-weight: 500;"><?= e($t['agent_name']) ?></span>
-                                    </div>
-                                <?php else: ?>
-                                    <span style="color: var(--text-subtlest); font-size: 12px; font-style: italic;">Unassigned</span>
-                                <?php endif; ?>
+                                <span style="font-size: 13px; color: <?= $t['agent_name'] ? 'var(--text-heading)' : 'var(--text-subtlest)' ?>;">
+                                    <?= e($t['agent_name'] ?? 'Unassigned') ?>
+                                </span>
                             </td>
                             <td style="font-size: 12px; color: var(--text-muted);">
                                 <?= date('M d, H:i', strtotime($t['updated_at'] ?? $t['created_at'])) ?>
                             </td>
                             <td style="text-align: right;">
-                                <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm" style="padding: 3px 10px;">
-                                    View &rarr;
+                                <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">
+                                    View
                                 </a>
                             </td>
                         </tr>

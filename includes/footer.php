@@ -1,33 +1,23 @@
-<?php
-// =====================================================================
-// includes/footer.php
-// Standardized Enterprise Footer & JS Bootstrapper
-// =====================================================================
+    </div>
+</main>
 
-declare(strict_types=1);
-?>
+<footer class="site-footer">
+    <div class="container footer-inner">
+        <div>
+            <strong>CoreDesk</strong> &middot; Built on Core PHP, MySQL &amp; Vanilla JS. Zero framework abstractions.
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <span>Engineered by <strong>Diksha Damahe</strong></span>
+            <span>&bull;</span>
+            <a href="https://github.com/dikshadamahe/CoreDesk" target="_blank" rel="noopener">GitHub Repository</a>
+        </div>
+    </div>
+</footer>
 
-<?php if (empty($isAuthPage)): ?>
-        </main>
-        
-        <footer style="padding: 18px 32px; border-top: 1px solid var(--jira-border-subtle); background: #FFFFFF; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 12px;">
-            <div>
-                <strong>CoreDesk Service Management</strong> &middot; Engineered in Pure Core PHP 8.x, Vanilla JS &amp; MySQL.
-            </div>
-            <div style="display: flex; gap: 16px; align-items: center;">
-                <span>Role: <strong><?= e($currentUser['role'] ?? 'Guest') ?></strong></span>
-                <span>&bull;</span>
-                <a href="https://github.com/dikshadamahe/CoreDesk" target="_blank" rel="noopener" style="color: var(--jira-blue);">GitHub Repository</a>
-            </div>
-        </footer>
-    </div> <!-- /.app-main -->
-</div> <!-- /.app-shell -->
-<?php endif; ?>
-
-<!-- Toast Alert Notifications Container -->
+<!-- Toast Notifications -->
 <div id="toast-container"></div>
 
-<!-- Native Vanilla JavaScript Client Engine -->
+<!-- Vanilla JS Client Logic -->
 <script src="assets/js/app.js"></script>
 </body>
 </html>

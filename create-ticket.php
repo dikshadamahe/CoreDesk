@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // create-ticket.php
-// Enterprise Incident Submission Portal (Jira ITIL Standard)
+// Clean SaaS Ticket Creation Form
 // =====================================================================
 
 declare(strict_types=1);
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $logStmt = $pdo->prepare("
                     INSERT INTO ticket_logs (ticket_id, user_id, action, new_value)
-                    VALUES (:ticket_id, :user_id, 'Incident Created', 'Open')
+                    VALUES (:ticket_id, :user_id, 'Ticket Created', 'Open')
                 ");
                 $logStmt->execute([
                     'ticket_id' => $ticketId,
@@ -63,34 +63,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                $error = 'Failed to submit incident: ' . $e->getMessage();
+                $error = 'Failed to submit ticket: ' . $e->getMessage();
             }
         }
     }
 }
 
-$pageTitle = 'Raise New Incident';
+$pageTitle = 'Submit New Ticket';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<div style="max-width: 820px; margin: 0 auto;">
+<div style="max-width: 800px; margin: 0 auto;">
     <div style="margin-bottom: 24px;">
         <a href="tickets.php" class="btn btn-secondary btn-sm" style="margin-bottom: 12px;">
-            &larr; Back to Queues
+            &larr; Back to Tickets
         </a>
-        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">Raise New Support Incident</h1>
-        <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
-            Provide reproduction steps, expected versus observed results, and technical environment parameters.
+        <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px;">Submit a Support Ticket</h1>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">
+            Provide reproduction steps, expected behavior, and error logs for the engineering team.
         </p>
     </div>
 
-    <div class="card" style="box-shadow: var(--shadow-modal);">
-        <div class="card-header" style="background: #FAFBFC; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: var(--text-heading); font-size: 14px;">Incident Details &amp; SLA Classification</strong>
-            <span class="tag-category">ITIL Incident Management</span>
+    <div class="card">
+        <div class="card-header">
+            <strong style="color: var(--text-heading); font-size: 15px;">New Request Details</strong>
+            <span class="category-tag">Prepared Statement Input</span>
         </div>
 
-        <div class="card-body" style="padding: 28px;">
+        <div class="card-body">
             <?php if ($error): ?>
                 <div class="toast-alert toast-error" style="position: static; margin-bottom: 20px;">
                     <?= e($error) ?>
@@ -102,11 +102,11 @@ require_once __DIR__ . '/includes/header.php';
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div>
-                        <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
-                            Category / Affected Service *
+                        <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">
+                            Category *
                         </label>
                         <select name="category_id" class="form-control" required>
-                            <option value="">Select affected subsystem...</option>
+                            <option value="">Select issue category...</option>
                             <?php foreach ($categories as $cat): ?>
                                 <option value="<?= (int)$cat['id'] ?>">
                                     <?= e($cat['name']) ?>
@@ -116,39 +116,36 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <div>
-                        <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
-                            Severity / Impact Level *
+                        <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">
+                            Severity / Priority *
                         </label>
                         <select name="priority" class="form-control" required>
-                            <option value="Low">▼ Low — General inquiry, minimal business impact</option>
-                            <option value="Medium" selected>〓 Medium — Standard operational bug / degradation</option>
-                            <option value="High">▲ High — Production feature impaired</option>
-                            <option value="Critical">▲▲ Critical — P0 Complete system outage / blocker</option>
+                            <option value="Low">Low — General inquiry</option>
+                            <option value="Medium" selected>Medium — Standard operational defect</option>
+                            <option value="High">High — Production feature impaired</option>
+                            <option value="Critical">Critical — P0 Outage / Blocker</option>
                         </select>
                     </div>
                 </div>
 
                 <div>
-                    <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
-                        Incident Summary *
+                    <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">
+                        Subject *
                     </label>
-                    <input type="text" name="subject" class="form-control" placeholder="E.g., HTTP 504 Gateway Timeout during batch transaction export" required>
+                    <input type="text" name="subject" class="form-control" placeholder="E.g., 500 Internal Server Error on Payment Webhook Callback" required>
                 </div>
 
                 <div>
-                    <label style="display: block; font-weight: 600; font-size: 12.5px; color: var(--text-heading); margin-bottom: 6px;">
-                        Reproduction Steps &amp; Stack Traces *
+                    <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">
+                        Description &amp; Reproduction Steps *
                     </label>
-                    <textarea name="description" rows="7" class="form-control" placeholder="1. Navigate to endpoint /api/v1/...
-2. Pass authorization bearer token
-3. Observe uncaught exception or latency spike
-4. Attach stack trace / server logs here..." required></textarea>
+                    <textarea name="description" rows="6" class="form-control" placeholder="Describe the problem, stack traces, expected outcome, and exact URL/endpoint..." required></textarea>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--jira-border-subtle); padding-top: 16px;">
+                <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-subtle); padding-top: 18px;">
                     <a href="tickets.php" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary" style="padding: 9px 24px;">
-                        Submit Incident Ticket
+                    <button type="submit" class="btn btn-primary">
+                        Submit Ticket
                     </button>
                 </div>
             </form>
