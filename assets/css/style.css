@@ -14,11 +14,11 @@
     --primary-dark: #2d3bbd;
     --accent: #6366f1;
 
-    /* Backgrounds & Dot Grid */
-    --bg-page: #f8faff;
-    --dot-color: #cbdcfd;
+    /* Backgrounds & Dot Grid (Exact match to uploaded image) */
+    --bg-page: #ffffff;
+    --dot-color: #cbd5e1;
     --bg-surface: #ffffff;
-    --bg-surface-subtle: #f9fbff;
+    --bg-surface-subtle: #f8fafc;
     --border-subtle: #e2e8f0;
     --border-card: #e5eaf2;
 
@@ -64,9 +64,9 @@
 
     /* Elevations */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-card: 0 4px 20px -2px rgba(68, 87, 255, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 2px 12px -2px rgba(68, 87, 255, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
     --shadow-elevated: 0 12px 32px -4px rgba(68, 87, 255, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 10px 25px -3px rgba(68, 87, 255, 0.12);
+    --shadow-hover: 0 8px 24px -2px rgba(68, 87, 255, 0.12);
 
     --radius-sm: 6px;
     --radius-md: 10px;
@@ -75,7 +75,7 @@
 }
 
 /* =====================================================================
-   Base Reset with Dot Pattern Background
+   Base Reset with Exact Dot Pattern Background
    ===================================================================== */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -85,9 +85,9 @@
 
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--bg-page);
-    background-image: radial-gradient(var(--dot-color) 1.5px, transparent 1.5px);
-    background-size: 24px 24px;
+    background-color: #ffffff;
+    background-image: radial-gradient(circle, #cbd5e1 2px, transparent 2px);
+    background-size: 30px 30px;
     background-attachment: fixed;
     color: var(--text-body);
     font-size: 14px;
