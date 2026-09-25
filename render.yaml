@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: coredesk
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: DB_DRIVER
+        value: sqlite

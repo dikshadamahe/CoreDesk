@@ -25,6 +25,7 @@ try {
         // SQLite fallback for standalone portable evaluation
         $sqlitePath = __DIR__ . '/../database/coredesk.sqlite';
         $pdo = new PDO("sqlite:" . $sqlitePath, null, null, $pdoOptions);
+        initializeSqliteFallback($pdo);
     } else {
         // Primary Enterprise MySQL Connection with Prepared Statements
         $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";

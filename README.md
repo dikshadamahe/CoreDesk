@@ -303,6 +303,28 @@ Open **http://localhost:8000** in your browser.
 
 ---
 
+## Deploy to Render
+
+CoreDesk includes a production `Dockerfile` and a `render.yaml` Blueprint for zero-configuration cloud deployment on Render.
+
+### Option A: 1-Click Blueprint Deployment (Recommended)
+1. Go to your [Render Dashboard](https://dashboard.render.com).
+2. Click **New +** and select **Blueprint**.
+3. Connect your GitHub repository: `dikshadamahe/CoreDesk`.
+4. Render will automatically detect `render.yaml` and configure the service as a Docker Web Service on the Free plan.
+5. Click **Apply**. Render will build the container and deploy your live public URL (`https://coredesk.onrender.com`).
+
+### Option B: Manual Web Service Setup
+1. Go to your [Render Dashboard](https://dashboard.render.com).
+2. Click **New +** and select **Web Service**.
+3. Connect the repository `dikshadamahe/CoreDesk`.
+4. Under **Runtime**, select **Docker**.
+5. Set the **Instance Type** to **Free**.
+6. Under **Environment Variables**, optionally set `DB_DRIVER` to `sqlite` (or provide MySQL credentials).
+7. Click **Create Web Service**. Render builds the image and launches Apache on the dynamically assigned `$PORT`.
+
+---
+
 ## Demo Access Profiles
 
 The sign-in page includes one-click role buttons for rapid evaluation:
