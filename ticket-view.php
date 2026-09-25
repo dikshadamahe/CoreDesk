@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // ticket-view.php
-// Zendesk Agent Workspace 3-Column Incident Console (Exact Match to Photo 5)
+// Dual-Pane Conversation Workspace (Clean SaaS Standard)
 // =====================================================================
 
 declare(strict_types=1);
@@ -14,7 +14,7 @@ $currentUser = getLoggedInUser();
 
 $ticketId = (int)($_GET['id'] ?? 0);
 if ($ticketId <= 0) {
-    header('Location: index.php');
+    header('Location: tickets.php');
     exit;
 }
 
@@ -73,7 +73,7 @@ $logsStmt = $pdo->prepare("
     INNER JOIN users u ON tl.user_id = u.id
     WHERE tl.ticket_id = :ticket_id
     ORDER BY tl.created_at DESC
-    LIMIT 8
+    LIMIT 10
 ");
 $logsStmt->execute(['ticket_id' => $ticketId]);
 $logs = $logsStmt->fetchAll();
@@ -82,176 +82,120 @@ $pageTitle = $ticket['ticket_code'] . ' - ' . $ticket['subject'];
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- 3-Column Zendesk Agent Workspace (Photo 5 Layout) -->
-<div class="zd-agent-workspace">
-    
-    <!-- Column 1: Left Ticket Details & Properties Pane -->
-    <div class="zd-left-pane">
-        <div class="zd-panel-card">
-            <span class="zd-field-label">Requester</span>
-            <div class="zd-user-row">
-                <div class="zd-avatar-circle" style="background: #2e74b5;">
-                    <?= strtoupper(substr($ticket['customer_name'], 0, 1)) ?>
-                </div>
-                <div>
-                    <div style="font-weight: 600; font-size: 13px;"><?= e($ticket['customer_name']) ?></div>
-                    <div style="font-size: 11px; color: var(--zd-text-muted);"><?= e($ticket['customer_email']) ?></div>
-                </div>
-            </div>
-        </div>
+<!-- Top Action Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <a href="tickets.php" class="btn btn-secondary btn-sm">
+            &larr; Back to Tickets
+        </a>
+        <span style="color: var(--border-subtle); font-size: 18px;">|</span>
+        <span class="ticket-key" style="font-size: 15px;"><?= e($ticket['ticket_code']) ?></span>
+        
+        <span class="priority-pill priority-<?= strtolower($ticket['priority']) ?>">
+            <?= e($ticket['priority']) ?>
+        </span>
 
-        <div class="zd-panel-card">
-            <span class="zd-field-label">Assignee</span>
-            <div class="zd-user-row">
-                <div class="zd-avatar-circle" style="background: #17494d;">
-                    <?= strtoupper(substr($ticket['agent_name'] ?? 'U', 0, 1)) ?>
-                </div>
-                <div>
-                    <div style="font-weight: 600; font-size: 13px;"><?= e($ticket['agent_name'] ?? 'Unassigned') ?></div>
-                    <div style="font-size: 11px; color: var(--zd-text-muted);">Support Specialist</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="zd-panel-card" style="display: flex; flex-direction: column; gap: 12px;">
-            <div>
-                <span class="zd-field-label">Status</span>
-                <?php if ($currentUser['role'] === 'customer'): ?>
-                    <?php
-                        $badgeClass = match(strtolower($ticket['status'])) {
-                            'open'        => 'zd-badge-open',
-                            'in-progress' => 'zd-badge-progress',
-                            'resolved'    => 'zd-badge-solved',
-                            default       => 'zd-badge-closed'
-                        };
-                    ?>
-                    <span class="zd-badge <?= $badgeClass ?> js-status-badge-<?= (int)$ticket['id'] ?>">
-                        <?= strtoupper(e($ticket['status'])) ?>
-                    </span>
-                <?php else: ?>
-                    <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$ticket['id'] ?>" style="font-weight: 600;">
-                        <option value="Open" <?= $ticket['status'] === 'Open' ? 'selected' : '' ?>>Open</option>
-                        <option value="In-Progress" <?= $ticket['status'] === 'In-Progress' ? 'selected' : '' ?>>In-Progress</option>
-                        <option value="Resolved" <?= $ticket['status'] === 'Resolved' ? 'selected' : '' ?>>Solved</option>
-                        <option value="Closed" <?= $ticket['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
-                    </select>
-                <?php endif; ?>
-            </div>
-
-            <div>
-                <span class="zd-field-label">Priority</span>
-                <span class="zd-badge <?= strtolower($ticket['priority']) === 'critical' ? 'zd-badge-open' : 'zd-badge-progress' ?>">
-                    <?= e($ticket['priority']) ?>
-                </span>
-            </div>
-
-            <div>
-                <span class="zd-field-label">Category</span>
-                <span style="font-size: 12px; font-weight: 500; color: var(--zd-text-main); background: #e9ebed; padding: 3px 8px; border-radius: 3px;">
-                    <?= e($ticket['category_name']) ?>
-                </span>
-            </div>
-
-            <div>
-                <span class="zd-field-label">Tags</span>
-                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                    <span style="font-size: 11px; color: #556877; background: #eef2f5; padding: 2px 6px; border-radius: 3px;">production</span>
-                    <span style="font-size: 11px; color: #556877; background: #eef2f5; padding: 2px 6px; border-radius: 3px;">api</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="font-size: 11.5px; color: var(--zd-text-muted); padding: 0 4px;">
-            <div>Created: <?= date('M d, Y · H:i', strtotime($ticket['created_at'])) ?></div>
-            <div>Updated: <?= date('M d, Y · H:i', strtotime($ticket['updated_at'] ?? $ticket['created_at'])) ?></div>
-        </div>
+        <span class="status-pill status-<?= strtolower(str_replace('-', '', $ticket['status'])) ?> js-status-badge-<?= (int)$ticket['id'] ?>">
+            <?= e($ticket['status']) ?>
+        </span>
     </div>
 
-    <!-- Column 2: Center Main Conversation Stream (Photo 5) -->
-    <div class="zd-center-pane">
-        
-        <!-- Header Strip -->
-        <div class="zd-ticket-header-strip">
-            <div style="font-size: 12px; color: var(--zd-text-muted); display: flex; align-items: center; gap: 8px;">
-                <span><?= e($ticket['customer_name']) ?></span>
-                <span>&bull;</span>
-                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 600;"><?= e($ticket['ticket_code']) ?></span>
-                <span>&bull;</span>
-                <span>via Web Portal</span>
-            </div>
-            <h1 class="zd-ticket-subject-title"><?= e($ticket['subject']) ?></h1>
+    <?php if ($currentUser['role'] !== 'customer'): ?>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Change Status:</span>
+            <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$ticket['id'] ?>" style="width: 140px; font-weight: 600;">
+                <option value="Open" <?= $ticket['status'] === 'Open' ? 'selected' : '' ?>>Open</option>
+                <option value="In-Progress" <?= $ticket['status'] === 'In-Progress' ? 'selected' : '' ?>>In-Progress</option>
+                <option value="Resolved" <?= $ticket['status'] === 'Resolved' ? 'selected' : '' ?>>Resolved</option>
+                <option value="Closed" <?= $ticket['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
+            </select>
         </div>
+    <?php endif; ?>
+</div>
 
-        <!-- Scrollable Conversation Feed -->
-        <div id="ticket-replies-list" class="zd-conversation-scroll">
-            
-            <!-- Original Description Card -->
-            <div class="zd-message-bubble">
-                <div class="zd-message-head">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div class="zd-avatar-circle" style="width: 24px; height: 24px; font-size: 10px; background: #2e74b5;">
-                            <?= strtoupper(substr($ticket['customer_name'], 0, 1)) ?>
-                        </div>
-                        <strong style="font-size: 13px;"><?= e($ticket['customer_name']) ?></strong>
-                        <span style="font-size: 11px; color: var(--zd-text-muted);">via Web Portal</span>
+<!-- Dual Pane Layout -->
+<div class="workspace-grid">
+    
+    <!-- Left Conversation Column -->
+    <div>
+        <!-- Main Issue Description Card -->
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header" style="background: #ffffff;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="avatar-initial" style="background: var(--primary);">
+                        <?= strtoupper(substr($ticket['customer_name'], 0, 1)) ?>
                     </div>
-                    <span style="font-size: 11.5px; color: var(--zd-text-muted);">
-                        <?= date('M d, Y · H:i', strtotime($ticket['created_at'])) ?>
-                    </span>
+                    <div>
+                        <strong style="color: var(--text-heading); font-size: 14px;"><?= e($ticket['customer_name']) ?></strong>
+                        <span style="color: var(--text-muted); font-size: 12px;">(<?= e($ticket['customer_email']) ?>)</span>
+                    </div>
                 </div>
-                <div class="zd-message-body">
+                <span style="color: var(--text-muted); font-size: 12.5px;">
+                    <?= date('M d, Y · H:i', strtotime($ticket['created_at'])) ?>
+                </span>
+            </div>
+
+            <div class="card-body">
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 14px; color: var(--text-heading);">
+                    <?= e($ticket['subject']) ?>
+                </h2>
+                <div style="background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">
 <?= e($ticket['description']) ?>
                 </div>
             </div>
+        </div>
 
-            <!-- Follow-up Replies -->
+        <!-- Thread Messages Stream -->
+        <div id="ticket-replies-list" class="thread-stream">
             <?php foreach ($replies as $reply): ?>
                 <?php 
                     $isInternal = (int)$reply['is_internal_note'] === 1;
                     $initial = strtoupper(substr($reply['user_name'], 0, 1));
-                    $avatarBg = $reply['user_role'] === 'customer' ? '#2e74b5' : '#17494d';
+                    $bg = $reply['user_role'] === 'admin' ? '#3244e8' : ($reply['user_role'] === 'agent' ? '#4457ff' : '#6366f1');
                 ?>
-                <div class="zd-message-bubble <?= $isInternal ? 'internal-note' : '' ?>">
-                    <div class="zd-message-head">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="zd-avatar-circle" style="width: 24px; height: 24px; font-size: 10px; background: <?= $avatarBg ?>;">
+                <div class="reply-card <?= $isInternal ? 'internal-note' : '' ?>">
+                    <div class="reply-header">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="avatar-initial" style="background: <?= $bg ?>; width: 24px; height: 24px; font-size: 10px;">
                                 <?= $initial ?>
                             </div>
-                            <strong style="font-size: 13px;"><?= e($reply['user_name']) ?></strong>
-                            <span class="zd-badge <?= $reply['user_role'] === 'customer' ? 'zd-badge-progress' : 'zd-badge-closed' ?>" style="font-size: 9px; padding: 1px 5px;">
-                                <?= strtoupper(e($reply['user_role'])) ?>
-                            </span>
-                            <?php if ($isInternal): ?>
-                                <span class="zd-badge zd-badge-new" style="font-size: 9px; padding: 1px 5px;">
-                                    Internal Note
+                            <div>
+                                <strong style="font-size: 13px; color: var(--text-heading);"><?= e($reply['user_name']) ?></strong>
+                                <span class="status-pill status-open" style="font-size: 9.5px; padding: 1px 6px; margin-left: 4px;">
+                                    <?= strtoupper(e($reply['user_role'])) ?>
                                 </span>
-                            <?php endif; ?>
+                                <?php if ($isInternal): ?>
+                                    <span class="status-pill status-inprogress" style="font-size: 9.5px; padding: 1px 6px; margin-left: 4px;">
+                                        Private Staff Note
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <span style="font-size: 11.5px; color: var(--zd-text-muted);">
+                        <span style="font-size: 12px; color: var(--text-muted);">
                             <?= date('M d, H:i', strtotime($reply['created_at'])) ?>
                         </span>
                     </div>
-                    <div class="zd-message-body">
+                    <div class="reply-body">
                         <?= e($reply['message']) ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
 
-        <!-- Zendesk Bottom Composer / Reply Editor -->
-        <div class="zd-composer-box">
+        <!-- Reply Editor Form -->
+        <div class="card" style="box-shadow: var(--shadow-card); overflow: hidden;">
             <?php if ($currentUser['role'] !== 'customer'): ?>
-                <div class="zd-composer-tabs">
-                    <button type="button" id="tab-public-reply" class="zd-composer-tab active" onclick="switchEditorMode('public')">
+                <div style="display: flex; background: #f8fafc; border-bottom: 1px solid var(--border-subtle);">
+                    <button type="button" id="tab-public-reply" class="btn btn-subtle" onclick="switchEditorMode('public')" style="border-radius: 0; padding: 12px 20px; font-weight: 600; color: var(--primary); border-bottom: 2px solid var(--primary); background: #ffffff;">
                         Public Reply
                     </button>
-                    <button type="button" id="tab-internal-note" class="zd-composer-tab tab-internal" onclick="switchEditorMode('internal')">
-                        Internal Note
+                    <button type="button" id="tab-internal-note" class="btn btn-subtle" onclick="switchEditorMode('internal')" style="border-radius: 0; padding: 12px 20px; font-weight: 600; color: var(--text-muted);">
+                        Private Staff Note
                     </button>
                 </div>
             <?php else: ?>
-                <div style="padding: 10px 16px; background: #f8f9fa; border-bottom: 1px solid var(--zd-border); font-size: 12.5px; font-weight: 600;">
-                    Reply to Support
+                <div style="padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: 13.5px;">
+                    Reply to Support Team
                 </div>
             <?php endif; ?>
 
@@ -259,64 +203,85 @@ require_once __DIR__ . '/includes/header.php';
                 <input type="hidden" id="ticket-id" value="<?= (int)$ticket['id'] ?>">
                 <input type="checkbox" id="is-internal-note" value="1" style="display: none;">
 
-                <textarea id="reply-message" rows="3" class="zd-composer-textarea" placeholder="Type your response, troubleshooting logs, or resolution notes..." required></textarea>
+                <div style="padding: 18px;">
+                    <textarea id="reply-message" rows="4" class="form-control" placeholder="Type your response, troubleshooting logs, or resolution notes..." required style="resize: vertical;"></textarea>
+                </div>
 
-                <div class="zd-composer-footer">
-                    <span style="font-size: 11.5px; color: var(--zd-text-muted);">
-                        Prepared PDO statements active
-                    </span>
+                <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Supports raw logs &amp; code blocks
+                    </div>
                     <button type="submit" class="btn btn-primary" id="reply-submit-btn">
-                        Submit Response
+                        Send Response
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Column 3: Right Customer Context & History Pane (Photo 5) -->
-    <div class="zd-right-pane">
-        
-        <!-- Customer Profile Card -->
-        <div class="zd-panel-card">
-            <div class="zd-customer-hero">
-                <div class="zd-customer-avatar-lg">
-                    <?= strtoupper(substr($ticket['customer_name'], 0, 1)) ?>
-                </div>
-                <div style="font-size: 15px; font-weight: 700; color: var(--zd-text-main);"><?= e($ticket['customer_name']) ?></div>
-                <div style="font-size: 12px; color: var(--zd-text-muted);"><?= e($ticket['customer_email']) ?></div>
+    <!-- Right Sidebar Inspector Column -->
+    <div>
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Ticket Information</strong>
             </div>
-
-            <div style="border-top: 1px solid var(--zd-border-subtle); padding-top: 12px; font-size: 12.5px; display: flex; flex-direction: column; gap: 8px;">
+            <div class="card-body" style="font-size: 13.5px; display: flex; flex-direction: column; gap: 14px;">
                 <div>
-                    <span class="zd-field-label">Organization</span>
-                    <strong>Client Enterprise</strong>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Category</span>
+                    <span class="category-tag"><?= e($ticket['category_name']) ?></span>
                 </div>
+
                 <div>
-                    <span class="zd-field-label">User Access</span>
-                    <span class="zd-badge zd-badge-progress">Active Client</span>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Assigned Specialist</span>
+                    <strong><?= e($ticket['agent_name'] ?? 'Unassigned') ?></strong>
+                </div>
+
+                <div>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Client Requester</span>
+                    <strong style="color: var(--text-heading);"><?= e($ticket['customer_name']) ?></strong>
+                    <div style="font-size: 12px; color: var(--text-muted);"><?= e($ticket['customer_email']) ?></div>
+                </div>
+
+                <div>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Submitted Date</span>
+                    <span style="color: var(--text-muted);"><?= date('M d, Y · H:i:s', strtotime($ticket['created_at'])) ?></span>
+                </div>
+
+                <div>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Last Modified</span>
+                    <span style="color: var(--text-muted);"><?= date('M d, Y · H:i:s', strtotime($ticket['updated_at'] ?? $ticket['created_at'])) ?></span>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Interaction History -->
-        <div class="zd-panel-card">
-            <span class="zd-field-label">Interaction History</span>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
+        <!-- Activity Audit Log -->
+        <div class="card">
+            <div class="card-header">
+                <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Activity Audit Log</strong>
+            </div>
+            <div class="card-body" style="padding: 16px 20px;">
                 <?php if (empty($logs)): ?>
-                    <div style="color: var(--zd-text-muted); font-size: 12px;">No activity logged yet.</div>
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin: 0;">No audit events recorded yet.</p>
                 <?php else: ?>
-                    <?php foreach ($logs as $log): ?>
-                        <div class="zd-history-item">
-                            <div style="font-weight: 600; color: var(--zd-text-main);"><?= e($log['action']) ?></div>
-                            <div style="color: var(--zd-text-muted); font-size: 11px;">
-                                by <?= e($log['actor_name']) ?> &middot; <?= date('M d, H:i', strtotime($log['created_at'])) ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                    <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px;">
+                        <?php foreach ($logs as $log): ?>
+                            <li style="border-left: 2px solid var(--primary); padding-left: 10px; font-size: 12.5px;">
+                                <div style="font-weight: 600; color: var(--text-heading);"><?= e($log['action']) ?></div>
+                                <div style="color: var(--text-muted); font-size: 11.5px;">
+                                    by <strong><?= e($log['actor_name']) ?></strong>
+                                    <?php if ($log['new_value']): ?>
+                                        &rarr; <span class="status-pill status-open" style="font-size: 9px; padding: 0 4px;"><?= e($log['new_value']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="color: var(--text-subtlest); font-size: 11px; margin-top: 2px;">
+                                    <?= date('M d, H:i:s', strtotime($log['created_at'])) ?>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
                 <?php endif; ?>
             </div>
         </div>
-
     </div>
 
 </div>
@@ -330,22 +295,42 @@ function switchEditorMode(mode) {
     const submitBtn = document.getElementById('reply-submit-btn');
 
     if (mode === 'internal') {
-        tabPublic?.classList.remove('active');
-        tabInternal?.classList.add('active');
+        tabPublic.style.color = 'var(--text-muted)';
+        tabPublic.style.borderBottom = 'none';
+        tabPublic.style.background = 'transparent';
+
+        tabInternal.style.color = '#b45309';
+        tabInternal.style.borderBottom = '2px solid #b45309';
+        tabInternal.style.background = '#fffdf5';
+
         if (internalCheckbox) internalCheckbox.checked = true;
         textarea.style.backgroundColor = '#fffdf5';
-        textarea.placeholder = 'Type internal note (visible only to support agents)...';
+        textarea.placeholder = 'Type private internal note (visible to staff only)...';
         if (submitBtn) {
-            submitBtn.textContent = 'Submit Internal Note';
+            submitBtn.textContent = 'Post Private Note';
+            submitBtn.className = 'btn btn-secondary';
+            submitBtn.style.color = '#b45309';
+            submitBtn.style.borderColor = '#fde68a';
+            submitBtn.style.background = '#fef3c7';
         }
     } else {
-        tabInternal?.classList.remove('active');
-        tabPublic?.classList.add('active');
+        tabInternal.style.color = 'var(--text-muted)';
+        tabInternal.style.borderBottom = 'none';
+        tabInternal.style.background = 'transparent';
+
+        tabPublic.style.color = 'var(--primary)';
+        tabPublic.style.borderBottom = '2px solid var(--primary)';
+        tabPublic.style.background = '#ffffff';
+
         if (internalCheckbox) internalCheckbox.checked = false;
         textarea.style.backgroundColor = '#ffffff';
         textarea.placeholder = 'Type your response, troubleshooting logs, or resolution notes...';
         if (submitBtn) {
-            submitBtn.textContent = 'Submit Response';
+            submitBtn.textContent = 'Send Response';
+            submitBtn.className = 'btn btn-primary';
+            submitBtn.style.color = '#ffffff';
+            submitBtn.style.borderColor = 'transparent';
+            submitBtn.style.background = 'var(--primary)';
         }
     }
 }

@@ -77,9 +77,7 @@ $csrfToken = generateCsrfToken();
         <a href="login.php" class="brand-wrap" style="justify-content: center; font-size: 30px; margin-bottom: 12px; display: inline-flex;">
             <span>Core<span class="brand-highlight">Desk</span></span>
         </a>
-        <div style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 0;">
-            Support Workspace &amp; Help Desk
-        </div>
+
     </div>
 
     <div class="card" style="box-shadow: var(--shadow-elevated); padding: 32px;">
