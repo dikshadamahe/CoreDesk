@@ -25,8 +25,8 @@ function showToast(message, type = 'success') {
 
     const toast = document.createElement('div');
     toast.className = `toast-alert toast-${type === 'error' ? 'error' : 'success'}`;
-    const icon = type === 'error' ? '⚠️' : '✅';
-    toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
+    const label = type === 'error' ? 'Notice:' : 'Success:';
+    toast.innerHTML = `<span style="font-weight:700;">${label}</span> <span>${escapeHtml(message)}</span>`;
     
     container.appendChild(toast);
     setTimeout(() => {
@@ -203,7 +203,7 @@ function appendReplyToThread(reply) {
                     <span class="lozenge lozenge-inprogress" style="font-size: 9px; padding: 1px 5px; margin-left: 4px;">
                         ${escapeHtml((reply.user_role || 'Agent').toUpperCase())}
                     </span>
-                    ${isInternal ? '<span class="lozenge" style="background: #FFE380; color: #614700; border: 1px solid #FFAB00; font-size: 9px; margin-left: 4px;">🔒 Private Staff Note</span>' : ''}
+                    ${isInternal ? '<span class="status-pill status-inprogress" style="font-size: 9.5px; padding: 1px 6px; margin-left: 4px;">Private Staff Note</span>' : ''}
                 </div>
             </div>
             <span style="font-size: 11.5px; color: var(--text-muted);">Just now</span>

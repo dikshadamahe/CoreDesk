@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // login.php
-// Clean SaaS Authentication Portal (Dot Grid Background & Vibrant Blue)
+// Clean SaaS Authentication Portal (Dot Grid Background & Royal Blue)
 // =====================================================================
 
 declare(strict_types=1);
@@ -9,7 +9,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/database.php';
 
-if (isLoggedIn()) {
+// Only redirect if GET request and already logged in
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isLoggedIn()) {
     header('Location: index.php');
     exit;
 }
@@ -118,27 +119,26 @@ $csrfToken = generateCsrfToken();
             </button>
         </form>
 
-        <!-- 1-Click Persona Quick Switcher -->
+        <!-- 1-Click Persona Quick Switcher (Zero Emojis) -->
         <div style="margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border-subtle); text-align: center;">
             <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 12px;">
-                ⚡ 1-Click Fast Demo Login
+                Demo Profiles
             </span>
 
-            <form method="POST" action="login.php" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
-                <button type="submit" name="quick_login_role" value="admin" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
-                    <span style="font-size: 16px;">👑</span>
-                    <strong style="font-size: 12px;">Admin</strong>
-                </button>
-                <button type="submit" name="quick_login_role" value="agent" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
-                    <span style="font-size: 16px;">🛠️</span>
-                    <strong style="font-size: 12px;">Support</strong>
-                </button>
-                <button type="submit" name="quick_login_role" value="customer" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 4px; padding: 10px 4px;">
-                    <span style="font-size: 16px;">👤</span>
-                    <strong style="font-size: 12px;">Client</strong>
-                </button>
-            </form>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <a href="switch-role.php?role=admin" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 2px; padding: 10px 4px;">
+                    <strong style="font-size: 12.5px;">Admin</strong>
+                    <span style="font-size: 10.5px; color: var(--text-muted);">Lead</span>
+                </a>
+                <a href="switch-role.php?role=agent" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 2px; padding: 10px 4px;">
+                    <strong style="font-size: 12.5px;">Support</strong>
+                    <span style="font-size: 10.5px; color: var(--text-muted);">Executive</span>
+                </a>
+                <a href="switch-role.php?role=customer" class="btn btn-secondary btn-sm" style="flex-direction: column; gap: 2px; padding: 10px 4px;">
+                    <strong style="font-size: 12.5px;">Client</strong>
+                    <span style="font-size: 10.5px; color: var(--text-muted);">Requester</span>
+                </a>
+            </div>
 
             <div style="font-size: 11.5px; color: var(--text-subtlest); margin-top: 14px;">
                 Default demo password: <code>password123</code>

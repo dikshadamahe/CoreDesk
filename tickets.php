@@ -192,7 +192,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div style="display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 12px; color: var(--text-muted);">
                                     <span class="category-tag"><?= e($t['category_name']) ?></span>
                                     <?php if ($t['reply_count'] > 0): ?>
-                                        <span>💬 <?= (int)$t['reply_count'] ?></span>
+                                        <span><?= (int)$t['reply_count'] ?> replies</span>
                                     <?php endif; ?>
                                 </div>
                             </td>

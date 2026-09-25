@@ -103,21 +103,18 @@ require_once __DIR__ . '/includes/header.php';
             Read the architecture
         </a>
 
-        <!-- Fast Role Switcher Pills -->
+        <!-- Fast Role Switcher Pills (Zero Emojis, Direct Instant Switch) -->
         <div style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">SWITCH ROLE:</span>
-            <form method="POST" action="login.php" style="display: inline-flex; gap: 6px;">
-                <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
-                <button type="submit" name="quick_login_role" value="admin" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'admin' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700;' : '' ?>">
-                    👑 Admin
-                </button>
-                <button type="submit" name="quick_login_role" value="agent" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'agent' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700;' : '' ?>">
-                    🛠️ Support
-                </button>
-                <button type="submit" name="quick_login_role" value="customer" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'customer' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700;' : '' ?>">
-                    👤 Client
-                </button>
-            </form>
+            <a href="switch-role.php?role=admin" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'admin' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
+                Admin
+            </a>
+            <a href="switch-role.php?role=agent" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'agent' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
+                Support
+            </a>
+            <a href="switch-role.php?role=customer" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'customer' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
+                Client
+            </a>
         </div>
     </div>
 </div>
@@ -203,7 +200,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div style="display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 12px; color: var(--text-muted);">
                                     <span class="category-tag"><?= e($t['category_name']) ?></span>
                                     <?php if ($t['reply_count'] > 0): ?>
-                                        <span>💬 <?= (int)$t['reply_count'] ?> replies</span>
+                                        <span><?= (int)$t['reply_count'] ?> replies</span>
                                     <?php endif; ?>
                                 </div>
                             </td>

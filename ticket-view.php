@@ -166,7 +166,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </span>
                                 <?php if ($isInternal): ?>
                                     <span class="status-pill status-inprogress" style="font-size: 9.5px; padding: 1px 6px; margin-left: 4px;">
-                                        🔒 Private Staff Note
+                                        Private Staff Note
                                     </span>
                                 <?php endif; ?>
                             </div>
@@ -187,15 +187,15 @@ require_once __DIR__ . '/includes/header.php';
             <?php if ($currentUser['role'] !== 'customer'): ?>
                 <div style="display: flex; background: #f8fafc; border-bottom: 1px solid var(--border-subtle);">
                     <button type="button" id="tab-public-reply" class="btn btn-subtle" onclick="switchEditorMode('public')" style="border-radius: 0; padding: 12px 20px; font-weight: 600; color: var(--primary); border-bottom: 2px solid var(--primary); background: #ffffff;">
-                        💬 Public Reply
+                        Public Reply
                     </button>
                     <button type="button" id="tab-internal-note" class="btn btn-subtle" onclick="switchEditorMode('internal')" style="border-radius: 0; padding: 12px 20px; font-weight: 600; color: var(--text-muted);">
-                        🔒 Private Staff Note
+                        Private Staff Note
                     </button>
                 </div>
             <?php else: ?>
                 <div style="padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid var(--border-subtle); font-weight: 600; font-size: 13.5px;">
-                    💬 Reply to Support Team
+                    Reply to Support Team
                 </div>
             <?php endif; ?>
 
