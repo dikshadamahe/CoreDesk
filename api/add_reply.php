@@ -5,7 +5,9 @@
 // =====================================================================
 
 declare(strict_types=1);
-header('Content-Type: application/json; charset=utf-8');
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
@@ -18,7 +20,7 @@ $data = json_decode($rawInput, true);
 
 $ticketId   = (int)($data['ticket_id'] ?? 0);
 $message    = trim($data['message'] ?? '');
-$isInternal = !empty($data['is_internal']) && hasRole('admin', 'agent') ? 1 : 0;
+$isInternal = (!empty($data['is_internal_note']) || !empty($data['is_internal'])) && hasRole('admin', 'agent') ? 1 : 0;
 
 if ($ticketId <= 0 || empty($message)) {
     http_response_code(400);
@@ -50,10 +52,14 @@ try {
         'msg'      => $message,
         'internal' => $isInternal
     ]);
+    $replyId = (int)$pdo->lastInsertId();
 
     // 3. Update ticket timestamp and touch status if customer replied
     if ($currentUser['role'] === 'customer') {
-        $touchStmt = $pdo->prepare("UPDATE tickets SET status = CASE WHEN status = 'Resolved' THEN 'In-Progress' ELSE status END WHERE id = :id");
+        $touchStmt = $pdo->prepare("UPDATE tickets SET status = CASE WHEN status = 'Resolved' THEN 'In-Progress' ELSE status END, updated_at = CURRENT_TIMESTAMP WHERE id = :id");
+        $touchStmt->execute(['id' => $ticketId]);
+    } else {
+        $touchStmt = $pdo->prepare("UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = :id");
         $touchStmt->execute(['id' => $ticketId]);
     }
 
@@ -62,6 +68,17 @@ try {
     echo json_encode([
         'success'   => true,
         'message'   => 'Reply posted successfully.',
+        'reply'     => [
+            'id'               => $replyId,
+            'ticket_id'        => $ticketId,
+            'user_id'          => $currentUser['id'],
+            'user_name'        => $currentUser['name'],
+            'user_role'        => $currentUser['role'],
+            'message'          => $message,
+            'is_internal_note' => $isInternal,
+            'created_at'       => date('Y-m-d H:i:s'),
+            'formatted_time'   => date('M d, H:i')
+        ],
         'user_name' => $currentUser['name'],
         'role'      => $currentUser['role'],
         'time'      => date('M d, Y h:i A')

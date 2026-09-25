@@ -13,7 +13,14 @@ requireLogin();
 $currentUser = getLoggedInUser();
 
 // Single-pass raw SQL aggregation
-$metricsStmt = $pdo->query("
+$metricsWhere = "";
+$metricsParams = [];
+if ($currentUser['role'] === 'customer') {
+    $metricsWhere = "WHERE user_id = :uid";
+    $metricsParams['uid'] = $currentUser['id'];
+}
+
+$metricsStmt = $pdo->prepare("
     SELECT 
         COUNT(*) AS total_tickets,
         SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_count,
@@ -21,7 +28,9 @@ $metricsStmt = $pdo->query("
         SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) AS resolved_count,
         SUM(CASE WHEN priority = 'Critical' AND status != 'Resolved' AND status != 'Closed' THEN 1 ELSE 0 END) AS critical_count
     FROM tickets
+    {$metricsWhere}
 ");
+$metricsStmt->execute($metricsParams);
 $metrics = $metricsStmt->fetch() ?: [
     'total_tickets' => 0,
     'open_count' => 0,
@@ -67,6 +76,11 @@ if ($activeTab === 'open') {
     $sql .= " AND t.status = 'Resolved'";
 } elseif ($activeTab === 'critical') {
     $sql .= " AND t.priority = 'Critical'";
+} elseif ($activeTab === 'assigned_me' && $currentUser['role'] !== 'customer') {
+    $sql .= " AND t.assigned_agent_id = :assigned_me";
+    $params['assigned_me'] = $currentUser['id'];
+} elseif ($activeTab === 'unassigned' && $currentUser['role'] !== 'customer') {
+    $sql .= " AND (t.assigned_agent_id IS NULL OR t.assigned_agent_id = 0)";
 }
 
 $sql .= " ORDER BY CASE t.priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, t.created_at DESC LIMIT 20";
@@ -99,20 +113,6 @@ require_once __DIR__ . '/includes/header.php';
         <a href="https://github.com/dikshadamahe/CoreDesk" target="_blank" rel="noopener" class="btn btn-secondary">
             Read the architecture
         </a>
-
-        <!-- Fast Role Switcher Pills (Zero Emojis, Direct Instant Switch) -->
-        <div style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">SWITCH ROLE:</span>
-            <a href="switch-role.php?role=admin" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'admin' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Admin
-            </a>
-            <a href="switch-role.php?role=agent" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'agent' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Support
-            </a>
-            <a href="switch-role.php?role=customer" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'customer' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Client
-            </a>
-        </div>
     </div>
 </div>
 
@@ -146,12 +146,16 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Tickets Queue Table Card -->
 <div class="table-container">
     <div class="table-toolbar">
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <a href="index.php?tab=all" class="btn btn-sm <?= $activeTab === 'all' ? 'btn-primary' : 'btn-secondary' ?>">All</a>
             <a href="index.php?tab=open" class="btn btn-sm <?= $activeTab === 'open' ? 'btn-primary' : 'btn-secondary' ?>">Open</a>
             <a href="index.php?tab=inprogress" class="btn btn-sm <?= $activeTab === 'inprogress' ? 'btn-primary' : 'btn-secondary' ?>">In-Progress</a>
             <a href="index.php?tab=critical" class="btn btn-sm <?= $activeTab === 'critical' ? 'btn-primary' : 'btn-secondary' ?>" style="<?= $activeTab !== 'critical' ? 'color: #dc2626;' : '' ?>">Critical</a>
             <a href="index.php?tab=resolved" class="btn btn-sm <?= $activeTab === 'resolved' ? 'btn-primary' : 'btn-secondary' ?>">Resolved</a>
+            <?php if ($currentUser['role'] !== 'customer'): ?>
+                <a href="index.php?tab=assigned_me" class="btn btn-sm <?= $activeTab === 'assigned_me' ? 'btn-primary' : 'btn-secondary' ?>">My Assigned</a>
+                <a href="index.php?tab=unassigned" class="btn btn-sm <?= $activeTab === 'unassigned' ? 'btn-primary' : 'btn-secondary' ?>">Unassigned</a>
+            <?php endif; ?>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center;">
@@ -225,9 +229,11 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: <?= $t['agent_name'] ? 'var(--text-heading)' : 'var(--text-subtlest)' ?>;">
-                                    <?= e($t['agent_name'] ?? 'Unassigned') ?>
-                                </span>
+                                <?php if (!empty($t['agent_name'])): ?>
+                                    <span style="font-size: 13px; font-weight: 600; color: var(--text-heading);"><?= e($t['agent_name']) ?></span>
+                                <?php else: ?>
+                                    <span class="status-pill" style="background: #f1f5f9; color: #64748b; font-size: 11px; padding: 2px 7px;">Unassigned</span>
+                                <?php endif; ?>
                             </td>
                             <td style="text-align: right;">
                                 <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">

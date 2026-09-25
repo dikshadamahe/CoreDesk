@@ -34,7 +34,9 @@ if (isset($roleMap[$role])) {
 }
 
 $redirect = 'index.php';
-if (!empty($_SERVER['HTTP_REFERER'])) {
+if (!empty($_GET['redirect'])) {
+    $redirect = trim($_GET['redirect']);
+} elseif (!empty($_SERVER['HTTP_REFERER'])) {
     $parsed = parse_url($_SERVER['HTTP_REFERER']);
     $path = basename($parsed['path'] ?? '');
     if (!empty($path) && $path !== 'login.php' && $path !== 'logout.php') {

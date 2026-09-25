@@ -242,23 +242,31 @@ function initLiveMetrics() {
     const openEl = document.getElementById('metric-open');
     if (!openEl) return;
     refreshMetrics();
+    // Continuously update metric counters in background every 4 seconds
+    setInterval(refreshMetrics, 4000);
 }
 
 async function refreshMetrics() {
     try {
         const res = await fetch('api/metrics.php');
         if (!res.ok) return;
-        const metrics = await res.json();
+        const data = await res.json();
+        const m = data.metrics || data;
 
         const openEl = document.getElementById('metric-open');
         const inProgressEl = document.getElementById('metric-inprogress');
         const resolvedEl = document.getElementById('metric-resolved');
         const criticalEl = document.getElementById('metric-critical');
 
-        if (openEl) openEl.textContent = metrics.open_count ?? 0;
-        if (inProgressEl) inProgressEl.textContent = metrics.inprogress_count ?? 0;
-        if (resolvedEl) resolvedEl.textContent = metrics.resolved_count ?? 0;
-        if (criticalEl) criticalEl.textContent = metrics.critical_count ?? 0;
+        const openVal = m.open_count ?? m.open ?? 0;
+        const inProgressVal = m.inprogress_count ?? m.in_progress ?? 0;
+        const resolvedVal = m.resolved_count ?? m.resolved ?? 0;
+        const criticalVal = m.critical_count ?? m.critical_unresolved ?? m.critical ?? 0;
+
+        if (openEl) openEl.textContent = openVal;
+        if (inProgressEl) inProgressEl.textContent = inProgressVal;
+        if (resolvedEl) resolvedEl.textContent = resolvedVal;
+        if (criticalEl) criticalEl.textContent = criticalVal;
     } catch (e) {
         console.warn('Metrics refresh failed', e);
     }

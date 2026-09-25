@@ -5,7 +5,9 @@
 // =====================================================================
 
 declare(strict_types=1);
-header('Content-Type: application/json; charset=utf-8');
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
@@ -35,15 +37,35 @@ try {
     $stmt->execute($params);
     $metrics = $stmt->fetch();
 
+    $total = (int)($metrics['total_tickets'] ?? 0);
+    $open = (int)($metrics['open_tickets'] ?? 0);
+    $inProgress = (int)($metrics['in_progress_tickets'] ?? 0);
+    $resolved = (int)($metrics['resolved_tickets'] ?? 0);
+    $critical = (int)($metrics['critical_unresolved'] ?? 0);
+
     echo json_encode([
         'success' => true,
         'metrics' => [
-            'total'               => (int)($metrics['total_tickets'] ?? 0),
-            'open'                => (int)($metrics['open_tickets'] ?? 0),
-            'in_progress'         => (int)($metrics['in_progress_tickets'] ?? 0),
-            'resolved'            => (int)($metrics['resolved_tickets'] ?? 0),
-            'critical_unresolved' => (int)($metrics['critical_unresolved'] ?? 0),
-        ]
+            'total'               => $total,
+            'open'                => $open,
+            'in_progress'         => $inProgress,
+            'resolved'            => $resolved,
+            'critical_unresolved' => $critical,
+            'open_count'          => $open,
+            'inprogress_count'    => $inProgress,
+            'resolved_count'      => $resolved,
+            'critical_count'      => $critical,
+        ],
+        'total'               => $total,
+        'open'                => $open,
+        'in_progress'         => $inProgress,
+        'resolved'            => $resolved,
+        'critical'            => $critical,
+        'critical_unresolved' => $critical,
+        'open_count'          => $open,
+        'inprogress_count'    => $inProgress,
+        'resolved_count'      => $resolved,
+        'critical_count'      => $critical,
     ]);
 } catch (PDOException $e) {
     http_response_code(500);

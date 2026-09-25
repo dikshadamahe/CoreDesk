@@ -46,6 +46,11 @@ if ($currentUser['role'] === 'customer' && $ticket['user_id'] != $currentUser['i
     die("Access denied: You do not have permission to view this ticket.");
 }
 
+$staffAgents = [];
+if ($currentUser['role'] !== 'customer') {
+    $staffAgents = $pdo->query("SELECT id, name, role FROM users WHERE role IN ('admin', 'agent') ORDER BY role ASC, name ASC")->fetchAll();
+}
+
 $repliesSql = "
     SELECT 
         tr.*,
@@ -232,8 +237,29 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <div>
-                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 2px;">Assigned Specialist</span>
-                    <strong><?= e($ticket['agent_name'] ?? 'Unassigned') ?></strong>
+                    <span style="font-size: 11.5px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Assigned Specialist</span>
+                    <?php if ($currentUser['role'] !== 'customer'): ?>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <select id="ticket-assignee-select" class="form-control form-control-sm" style="font-weight: 600;" onchange="assignSpecialist(<?= (int)$ticket['id'] ?>, this.value)">
+                                <option value="" <?= empty($ticket['assigned_agent_id']) ? 'selected' : '' ?>>-- Unassigned --</option>
+                                <?php foreach ($staffAgents as $sa): ?>
+                                    <option value="<?= (int)$sa['id'] ?>" <?= ((int)($ticket['assigned_agent_id'] ?? 0) === (int)$sa['id']) ? 'selected' : '' ?>>
+                                        <?= e($sa['name']) ?> (<?= ucfirst(e($sa['role'])) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if ((int)($ticket['assigned_agent_id'] ?? 0) !== (int)$currentUser['id']): ?>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="assignSpecialist(<?= (int)$ticket['id'] ?>, <?= (int)$currentUser['id'] ?>)" style="align-self: flex-start; font-size: 11.5px; padding: 4px 10px;">
+                                    Assign to me
+                                </button>
+                            <?php else: ?>
+                                <span style="font-size: 11.5px; color: #047857; font-weight: 600;">Assigned to you</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <strong style="color: var(--text-heading);"><?= e($ticket['agent_name'] ?? 'Support Team Triage') ?></strong>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Assigned engineering specialist</div>
+                    <?php endif; ?>
                 </div>
 
                 <div>
@@ -332,6 +358,29 @@ function switchEditorMode(mode) {
             submitBtn.style.borderColor = 'transparent';
             submitBtn.style.background = 'var(--primary)';
         }
+    }
+}
+
+async function assignSpecialist(ticketId, agentId) {
+    try {
+        const res = await fetch('api/assign_ticket.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_id: parseInt(ticketId, 10),
+                agent_id: agentId !== '' && agentId !== null ? parseInt(agentId, 10) : null
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showToast(data.message || 'Specialist updated');
+            setTimeout(() => window.location.reload(), 600);
+        } else {
+            showToast(data.error || 'Failed to update assignment', 'error');
+        }
+    } catch (e) {
+        console.error('Assignment error:', e);
+        showToast('Network error while assigning ticket', 'error');
     }
 }
 </script>

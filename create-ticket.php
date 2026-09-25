@@ -14,6 +14,10 @@ $currentUser = getLoggedInUser();
 
 $error = null;
 $categories = $pdo->query("SELECT id, name, description FROM categories ORDER BY name ASC")->fetchAll();
+$staffAgents = [];
+if ($currentUser['role'] !== 'customer') {
+    $staffAgents = $pdo->query("SELECT id, name, role FROM users WHERE role IN ('admin', 'agent') ORDER BY role ASC, name ASC")->fetchAll();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = $_POST['csrf_token'] ?? '';
@@ -25,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $categoryId  = (int)($_POST['category_id'] ?? 0);
         $priority    = trim($_POST['priority'] ?? 'Medium');
 
+        $assignedAgentId = null;
+        if ($currentUser['role'] !== 'customer' && !empty($_POST['assigned_agent_id'])) {
+            $assignedAgentId = (int)$_POST['assigned_agent_id'] > 0 ? (int)$_POST['assigned_agent_id'] : null;
+        }
+
         if (empty($subject) || empty($description) || $categoryId <= 0) {
             $error = 'Please fill in all required fields (Category, Subject, and Description).';
         } else {
@@ -34,16 +43,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO tickets (ticket_code, user_id, category_id, subject, description, priority, status, created_at, updated_at)
-                    VALUES (:ticket_code, :user_id, :category_id, :subject, :description, :priority, 'Open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO tickets (ticket_code, user_id, category_id, subject, description, priority, status, assigned_agent_id, created_at, updated_at)
+                    VALUES (:ticket_code, :user_id, :category_id, :subject, :description, :priority, 'Open', :assigned_agent_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ");
                 $stmt->execute([
-                    'ticket_code' => $ticketCode,
-                    'user_id'     => $currentUser['id'],
-                    'category_id' => $categoryId,
-                    'subject'     => $subject,
-                    'description' => $description,
-                    'priority'    => $priority
+                    'ticket_code'       => $ticketCode,
+                    'user_id'           => $currentUser['id'],
+                    'category_id'       => $categoryId,
+                    'subject'           => $subject,
+                    'description'       => $description,
+                    'priority'          => $priority,
+                    'assigned_agent_id' => $assignedAgentId
                 ]);
                 $ticketId = (int)$pdo->lastInsertId();
 
@@ -55,6 +65,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'ticket_id' => $ticketId,
                     'user_id'   => $currentUser['id']
                 ]);
+
+                if ($assignedAgentId) {
+                    $agentStmt = $pdo->prepare("SELECT name FROM users WHERE id = :id");
+                    $agentStmt->execute(['id' => $assignedAgentId]);
+                    $agentName = $agentStmt->fetchColumn() ?: 'Specialist';
+
+                    $assignLogStmt = $pdo->prepare("
+                        INSERT INTO ticket_logs (ticket_id, user_id, action, old_value, new_value)
+                        VALUES (:ticket_id, :user_id, 'Specialist Assigned', 'Unassigned', :new_val)
+                    ");
+                    $assignLogStmt->execute([
+                        'ticket_id' => $ticketId,
+                        'user_id'   => $currentUser['id'],
+                        'new_val'   => $agentName
+                    ]);
+                }
 
                 $pdo->commit();
                 header("Location: ticket-view.php?id={$ticketId}&created=1");
@@ -127,6 +153,29 @@ require_once __DIR__ . '/includes/header.php';
                         </select>
                     </div>
                 </div>
+
+                <?php if ($currentUser['role'] !== 'customer'): ?>
+                    <div>
+                        <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">
+                            Assign Specialist (Optional)
+                        </label>
+                        <select name="assigned_agent_id" class="form-control">
+                            <option value="">-- Leave Unassigned (Triage Queue) --</option>
+                            <?php foreach ($staffAgents as $sa): ?>
+                                <option value="<?= (int)$sa['id'] ?>" <?= ((int)$currentUser['id'] === (int)$sa['id']) ? 'selected' : '' ?>>
+                                    <?= e($sa['name']) ?> (<?= ucfirst(e($sa['role'])) ?>) <?= ((int)$currentUser['id'] === (int)$sa['id']) ? '— Assign to Myself' : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Select which support executive or administrator will own this incident.
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div style="font-size: 12.5px; color: var(--text-muted); background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 14px;">
+                        <strong>Ticket Routing:</strong> Upon submission, your request will enter our engineering queue and be assigned to a designated support specialist for triage.
+                    </div>
+                <?php endif; ?>
 
                 <div>
                     <label style="display: block; font-weight: 600; font-size: 13px; color: var(--text-heading); margin-bottom: 6px;">

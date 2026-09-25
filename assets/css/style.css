@@ -14,9 +14,9 @@
     --primary-dark: #2d3bbd;
     --accent: #6366f1;
 
-    /* Backgrounds & Dot Grid (Exact match to uploaded image) */
+    /* Backgrounds & Dot Grid (Subtle low-opacity texture) */
     --bg-page: #ffffff;
-    --dot-color: #cbd5e1;
+    --dot-color: rgba(148, 163, 184, 0.32);
     --bg-surface: #ffffff;
     --bg-surface-subtle: #f8fafc;
     --border-subtle: #e2e8f0;
@@ -86,7 +86,7 @@
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: #ffffff;
-    background-image: radial-gradient(circle, #cbd5e1 2px, transparent 2px);
+    background-image: radial-gradient(circle, var(--dot-color) 1.5px, transparent 1.5px);
     background-size: 30px 30px;
     background-attachment: fixed;
     color: var(--text-body);

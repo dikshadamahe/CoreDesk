@@ -5,7 +5,9 @@
 // =====================================================================
 
 declare(strict_types=1);
-header('Content-Type: application/json; charset=utf-8');
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
@@ -15,6 +17,7 @@ $currentUser = getLoggedInUser();
 
 $status   = trim($_GET['status'] ?? '');
 $priority = trim($_GET['priority'] ?? '');
+$assigned = trim($_GET['assigned'] ?? '');
 $search   = trim($_GET['search'] ?? '');
 
 try {
@@ -54,6 +57,18 @@ try {
     if (!empty($priority) && $priority !== 'all') {
         $sql .= " AND t.priority = :priority";
         $params['priority'] = $priority;
+    }
+
+    if (!empty($assigned) && $currentUser['role'] !== 'customer') {
+        if ($assigned === 'me') {
+            $sql .= " AND t.assigned_agent_id = :assigned_me";
+            $params['assigned_me'] = $currentUser['id'];
+        } elseif ($assigned === 'unassigned') {
+            $sql .= " AND (t.assigned_agent_id IS NULL OR t.assigned_agent_id = 0)";
+        } elseif (is_numeric($assigned)) {
+            $sql .= " AND t.assigned_agent_id = :assigned_agent";
+            $params['assigned_agent'] = (int)$assigned;
+        }
     }
 
     if (!empty($search)) {

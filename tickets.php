@@ -13,10 +13,15 @@ requireLogin();
 $currentUser = getLoggedInUser();
 
 $categories = $pdo->query("SELECT id, name FROM categories ORDER BY name ASC")->fetchAll();
+$staffAgents = [];
+if ($currentUser['role'] !== 'customer') {
+    $staffAgents = $pdo->query("SELECT id, name, role FROM users WHERE role IN ('admin', 'agent') ORDER BY role ASC, name ASC")->fetchAll();
+}
 
 $filterStatus   = trim($_GET['status'] ?? '');
 $filterPriority = trim($_GET['priority'] ?? '');
 $filterCategory = trim($_GET['category'] ?? '');
+$filterAssigned = trim($_GET['assigned'] ?? '');
 $filterSearch   = trim($_GET['q'] ?? '');
 
 $sql = "
@@ -60,6 +65,18 @@ if (!empty($filterPriority)) {
 if (!empty($filterCategory)) {
     $sql .= " AND t.category_id = :category_id";
     $params['category_id'] = (int)$filterCategory;
+}
+
+if (!empty($filterAssigned) && $currentUser['role'] !== 'customer') {
+    if ($filterAssigned === 'me') {
+        $sql .= " AND t.assigned_agent_id = :assigned_me";
+        $params['assigned_me'] = $currentUser['id'];
+    } elseif ($filterAssigned === 'unassigned') {
+        $sql .= " AND (t.assigned_agent_id IS NULL OR t.assigned_agent_id = 0)";
+    } elseif (is_numeric($filterAssigned)) {
+        $sql .= " AND t.assigned_agent_id = :assigned_agent";
+        $params['assigned_agent'] = (int)$filterAssigned;
+    }
 }
 
 if (!empty($filterSearch)) {
@@ -134,6 +151,22 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </select>
         </div>
+
+        <?php if ($currentUser['role'] !== 'customer'): ?>
+            <div>
+                <label style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 6px;">Assigned To</label>
+                <select name="assigned" class="form-control form-control-sm">
+                    <option value="">All Specialists</option>
+                    <option value="me" <?= $filterAssigned === 'me' ? 'selected' : '' ?>>Assigned to Me</option>
+                    <option value="unassigned" <?= $filterAssigned === 'unassigned' ? 'selected' : '' ?>>Unassigned</option>
+                    <?php foreach ($staffAgents as $sa): ?>
+                        <option value="<?= (int)$sa['id'] ?>" <?= $filterAssigned == (string)$sa['id'] ? 'selected' : '' ?>>
+                            <?= e($sa['name']) ?> (<?= ucfirst(e($sa['role'])) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
 
         <div>
             <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; padding: 8px;">
@@ -220,9 +253,11 @@ require_once __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span style="font-size: 13px; color: <?= $t['agent_name'] ? 'var(--text-heading)' : 'var(--text-subtlest)' ?>;">
-                                    <?= e($t['agent_name'] ?? 'Unassigned') ?>
-                                </span>
+                                <?php if (!empty($t['agent_name'])): ?>
+                                    <span style="font-size: 13px; font-weight: 600; color: var(--text-heading);"><?= e($t['agent_name']) ?></span>
+                                <?php else: ?>
+                                    <span class="status-pill" style="background: #f1f5f9; color: #64748b; font-size: 11px; padding: 2px 7px;">Unassigned</span>
+                                <?php endif; ?>
                             </td>
                             <td style="font-size: 12px; color: var(--text-muted);">
                                 <?= date('M d, H:i', strtotime($t['updated_at'] ?? $t['created_at'])) ?>
