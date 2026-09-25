@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 // index.php
-// Clean SaaS Dashboard (Exact theme matching user reference)
+// Zendesk Style Incident Views & Operations Queue (Matching Photo 4)
 // =====================================================================
 
 declare(strict_types=1);
@@ -12,14 +12,15 @@ require_once __DIR__ . '/config/database.php';
 requireLogin();
 $currentUser = getLoggedInUser();
 
-// Single-pass raw SQL aggregation
+// Aggregate metrics
 $metricsStmt = $pdo->query("
     SELECT 
         COUNT(*) AS total_tickets,
         SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_count,
         SUM(CASE WHEN status = 'In-Progress' THEN 1 ELSE 0 END) AS inprogress_count,
         SUM(CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END) AS resolved_count,
-        SUM(CASE WHEN priority = 'Critical' AND status != 'Resolved' AND status != 'Closed' THEN 1 ELSE 0 END) AS critical_count
+        SUM(CASE WHEN priority = 'Critical' AND status != 'Resolved' AND status != 'Closed' THEN 1 ELSE 0 END) AS critical_count,
+        SUM(CASE WHEN assigned_agent_id IS NULL THEN 1 ELSE 0 END) AS unassigned_count
     FROM tickets
 ");
 $metrics = $metricsStmt->fetch() ?: [
@@ -27,10 +28,11 @@ $metrics = $metricsStmt->fetch() ?: [
     'open_count' => 0,
     'inprogress_count' => 0,
     'resolved_count' => 0,
-    'critical_count' => 0
+    'critical_count' => 0,
+    'unassigned_count' => 0
 ];
 
-$activeTab = trim($_GET['tab'] ?? 'all');
+$activeView = trim($_GET['view'] ?? 'all');
 
 $sql = "
     SELECT 
@@ -59,190 +61,184 @@ if ($currentUser['role'] === 'customer') {
     $params['uid'] = $currentUser['id'];
 }
 
-if ($activeTab === 'open') {
+if ($activeView === 'open') {
     $sql .= " AND t.status = 'Open'";
-} elseif ($activeTab === 'inprogress') {
+} elseif ($activeView === 'inprogress') {
     $sql .= " AND t.status = 'In-Progress'";
-} elseif ($activeTab === 'resolved') {
-    $sql .= " AND t.status = 'Resolved'";
-} elseif ($activeTab === 'critical') {
+} elseif ($activeView === 'critical') {
     $sql .= " AND t.priority = 'Critical'";
+} elseif ($activeView === 'unassigned') {
+    $sql .= " AND t.assigned_agent_id IS NULL";
+} elseif ($activeView === 'resolved') {
+    $sql .= " AND t.status = 'Resolved'";
 }
 
-$sql .= " ORDER BY CASE t.priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, t.created_at DESC LIMIT 20";
+$sql .= " ORDER BY CASE t.priority WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, t.created_at DESC LIMIT 25";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $tickets = $stmt->fetchAll();
 
-$pageTitle = 'Incident Dashboard';
+$pageTitle = 'Views';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Hero Header (Exact Match to User Reference Screenshot) -->
-<div style="margin-bottom: 36px;">
-    <div class="hero-pill">
-        <span class="hero-pill-dot"></span>
-        <span>Built on Core PHP, MySQL, vanilla JS</span>
-    </div>
-
-    <h1 style="font-size: 38px; font-weight: 800; letter-spacing: -0.035em; color: var(--text-heading); margin-bottom: 14px; line-height: 1.2;">
-        One queue for tickets.<br>
-        One thread for <span style="color: var(--primary);">conversations.</span>
-    </h1>
-
-    <p style="font-size: 16px; color: var(--text-muted); max-width: 680px; line-height: 1.6; margin-bottom: 24px;">
-        CoreDesk gives every request a structured ticket and every customer a real-time thread &mdash; issue tracking and live chat, running on a codebase you can actually read end to end.
-    </p>
-
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <a href="create-ticket.php" class="btn btn-primary">
-            Create Ticket
-        </a>
-        <a href="https://github.com/dikshadamahe/CoreDesk" target="_blank" rel="noopener" class="btn btn-secondary">
-            Read the architecture
+<!-- Zendesk Views & Queue Layout (Matching Photo 4) -->
+<div class="zd-queue-workspace">
+    
+    <!-- Left Column: Views Navigation -->
+    <aside class="zd-views-nav">
+        <div class="zd-views-title">Views</div>
+        
+        <a href="index.php?view=all" class="zd-view-link <?= $activeView === 'all' ? 'active' : '' ?>">
+            <span>All Open Tickets</span>
+            <span class="zd-view-count"><?= (int)$metrics['open_count'] + (int)$metrics['inprogress_count'] ?></span>
         </a>
 
-        <!-- Fast Role Switcher Pills (Zero Emojis, Direct Instant Switch) -->
-        <div style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">SWITCH ROLE:</span>
-            <a href="switch-role.php?role=admin" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'admin' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Admin
-            </a>
-            <a href="switch-role.php?role=agent" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'agent' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Support
-            </a>
-            <a href="switch-role.php?role=customer" class="btn btn-secondary btn-sm" style="<?= $currentUser['role'] === 'customer' ? 'border-color: var(--primary); color: var(--primary); font-weight: 700; background: var(--primary-subtle);' : '' ?>">
-                Client
-            </a>
+        <a href="index.php?view=critical" class="zd-view-link <?= $activeView === 'critical' ? 'active' : '' ?>">
+            <span>Urgent &amp; High Priority</span>
+            <span class="zd-view-count" style="color: #c33b24;"><?= (int)$metrics['critical_count'] ?></span>
+        </a>
+
+        <a href="index.php?view=unassigned" class="zd-view-link <?= $activeView === 'unassigned' ? 'active' : '' ?>">
+            <span>Unassigned Tickets</span>
+            <span class="zd-view-count"><?= (int)$metrics['unassigned_count'] ?></span>
+        </a>
+
+        <a href="index.php?view=inprogress" class="zd-view-link <?= $activeView === 'inprogress' ? 'active' : '' ?>">
+            <span>In-Progress Investigation</span>
+            <span class="zd-view-count"><?= (int)$metrics['inprogress_count'] ?></span>
+        </a>
+
+        <a href="index.php?view=resolved" class="zd-view-link <?= $activeView === 'resolved' ? 'active' : '' ?>">
+            <span>Recently Solved</span>
+            <span class="zd-view-count"><?= (int)$metrics['resolved_count'] ?></span>
+        </a>
+
+        <div style="margin-top: auto; padding: 16px; border-top: 1px solid var(--zd-border-subtle);">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--zd-text-subtle); margin-bottom: 6px;">
+                Session User
+            </div>
+            <div style="font-weight: 600; font-size: 13px; color: var(--zd-text-main);"><?= e($currentUser['name']) ?></div>
+            <div style="font-size: 11.5px; color: var(--zd-text-muted); text-transform: capitalize;"><?= e($currentUser['role']) ?></div>
         </div>
-    </div>
-</div>
+    </aside>
 
-<!-- 4 Elevated Metric Cards -->
-<div class="metrics-grid">
-    <div class="metric-card">
-        <span class="metric-label">Active Open</span>
-        <div class="metric-value" id="metric-open"><?= (int)$metrics['open_count'] ?></div>
-        <div class="metric-sub">Awaiting engineering triage</div>
-    </div>
+    <!-- Right Column: Queue Table -->
+    <div style="display: flex; flex-direction: column; background: #ffffff;">
+        
+        <!-- Header Strip -->
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--zd-border); display: flex; justify-content: space-between; align-items: center; background: #ffffff;">
+            <div>
+                <h1 style="font-size: 16px; font-weight: 700; color: var(--zd-text-main); margin: 0;">
+                    <?php
+                        echo match($activeView) {
+                            'critical'   => 'Urgent & High Priority Tickets',
+                            'unassigned' => 'Unassigned Tickets',
+                            'inprogress' => 'In-Progress Investigation',
+                            'resolved'   => 'Recently Solved Tickets',
+                            default      => 'All Tickets View'
+                        };
+                    ?>
+                </h1>
+                <span style="font-size: 12px; color: var(--zd-text-muted);">
+                    Showing <?= count($tickets) ?> matching tickets
+                </span>
+            </div>
 
-    <div class="metric-card">
-        <span class="metric-label">In-Progress</span>
-        <div class="metric-value" id="metric-inprogress" style="color: #b45309;"><?= (int)$metrics['inprogress_count'] ?></div>
-        <div class="metric-sub">Under active investigation</div>
-    </div>
-
-    <div class="metric-card">
-        <span class="metric-label">Critical Escalations</span>
-        <div class="metric-value" id="metric-critical" style="color: #dc2626;"><?= (int)$metrics['critical_count'] ?></div>
-        <div class="metric-sub">High-severity blockers</div>
-    </div>
-
-    <div class="metric-card">
-        <span class="metric-label">Resolved Tickets</span>
-        <div class="metric-value" id="metric-resolved" style="color: #047857;"><?= (int)$metrics['resolved_count'] ?></div>
-        <div class="metric-sub">Successfully closed inquiries</div>
-    </div>
-</div>
-
-<!-- Tickets Queue Table Card -->
-<div class="table-container">
-    <div class="table-toolbar">
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <a href="index.php?tab=all" class="btn btn-sm <?= $activeTab === 'all' ? 'btn-primary' : 'btn-secondary' ?>">All</a>
-            <a href="index.php?tab=open" class="btn btn-sm <?= $activeTab === 'open' ? 'btn-primary' : 'btn-secondary' ?>">Open</a>
-            <a href="index.php?tab=inprogress" class="btn btn-sm <?= $activeTab === 'inprogress' ? 'btn-primary' : 'btn-secondary' ?>">In-Progress</a>
-            <a href="index.php?tab=critical" class="btn btn-sm <?= $activeTab === 'critical' ? 'btn-primary' : 'btn-secondary' ?>" style="<?= $activeTab !== 'critical' ? 'color: #dc2626;' : '' ?>">Critical</a>
-            <a href="index.php?tab=resolved" class="btn btn-sm <?= $activeTab === 'resolved' ? 'btn-primary' : 'btn-secondary' ?>">Resolved</a>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="table-search-input" class="zd-search-input" placeholder="Filter by keyword, client...">
+                <a href="create-ticket.php" class="btn btn-primary btn-sm">+ Add Ticket</a>
+            </div>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <input type="text" id="table-search-input" class="form-control form-control-sm" placeholder="Search ticket #, title, client..." style="width: 250px;">
-            <a href="tickets.php" class="btn btn-secondary btn-sm">Full Queue &rarr;</a>
-        </div>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table-custom">
-            <thead>
-                <tr>
-                    <th style="width: 100px;">Ticket #</th>
-                    <th>Issue Summary &amp; Category</th>
-                    <th style="width: 170px;">Requester</th>
-                    <th style="width: 110px;">Priority</th>
-                    <th style="width: 150px;">Status</th>
-                    <th style="width: 150px;">Assigned</th>
-                    <th style="width: 90px; text-align: right;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($tickets)): ?>
+        <!-- Table -->
+        <div class="zd-table-wrap">
+            <table class="zd-table">
+                <thead>
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-muted);">
-                            No tickets currently in this view.
-                        </td>
+                        <th style="width: 80px;">Status</th>
+                        <th style="width: 90px;">Ticket #</th>
+                        <th>Subject &amp; Category</th>
+                        <th style="width: 170px;">Requester</th>
+                        <th style="width: 100px;">Priority</th>
+                        <th style="width: 150px;">Assignee</th>
+                        <th style="width: 120px;">Requested</th>
+                        <th style="width: 80px; text-align: right;">Action</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($tickets as $t): ?>
-                        <tr class="js-ticket-row">
-                            <td>
-                                <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="ticket-key">
-                                    <?= e($t['ticket_code']) ?>
-                                </a>
-                            </td>
-                            <td>
-                                <div>
-                                    <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="ticket-title">
-                                        <?= e($t['subject']) ?>
-                                    </a>
-                                </div>
-                                <div style="display: flex; gap: 8px; align-items: center; margin-top: 3px; font-size: 12px; color: var(--text-muted);">
-                                    <span class="category-tag"><?= e($t['category_name']) ?></span>
-                                    <?php if ($t['reply_count'] > 0): ?>
-                                        <span><?= (int)$t['reply_count'] ?> replies</span>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-heading);"><?= e($t['customer_name']) ?></div>
-                                <div style="font-size: 11px; color: var(--text-muted);"><?= e($t['customer_email']) ?></div>
-                            </td>
-                            <td>
-                                <span class="priority-pill priority-<?= strtolower($t['priority']) ?>">
-                                    <?= e($t['priority']) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if ($currentUser['role'] === 'customer'): ?>
-                                    <span class="status-pill status-<?= strtolower(str_replace('-', '', $t['status'])) ?> js-status-badge-<?= (int)$t['id'] ?>">
-                                        <?= e($t['status']) ?>
-                                    </span>
-                                <?php else: ?>
-                                    <select class="form-control form-control-sm js-status-select" data-ticket-id="<?= (int)$t['id'] ?>" style="font-size: 12px; font-weight: 600; padding: 4px 8px; width: 130px;">
-                                        <option value="Open" <?= $t['status'] === 'Open' ? 'selected' : '' ?>>Open</option>
-                                        <option value="In-Progress" <?= $t['status'] === 'In-Progress' ? 'selected' : '' ?>>In-Progress</option>
-                                        <option value="Resolved" <?= $t['status'] === 'Resolved' ? 'selected' : '' ?>>Resolved</option>
-                                        <option value="Closed" <?= $t['status'] === 'Closed' ? 'selected' : '' ?>>Closed</option>
-                                    </select>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <span style="font-size: 13px; color: <?= $t['agent_name'] ? 'var(--text-heading)' : 'var(--text-subtlest)' ?>;">
-                                    <?= e($t['agent_name'] ?? 'Unassigned') ?>
-                                </span>
-                            </td>
-                            <td style="text-align: right;">
-                                <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">
-                                    View
-                                </a>
+                </thead>
+                <tbody>
+                    <?php if (empty($tickets)): ?>
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 48px; color: var(--zd-text-muted);">
+                                No tickets currently in this view.
                             </td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php foreach ($tickets as $t): ?>
+                            <tr class="js-ticket-row">
+                                <td>
+                                    <?php
+                                        $badgeClass = match(strtolower($t['status'])) {
+                                            'open'        => 'zd-badge-open',
+                                            'in-progress' => 'zd-badge-progress',
+                                            'resolved'    => 'zd-badge-solved',
+                                            default       => 'zd-badge-closed'
+                                        };
+                                    ?>
+                                    <span class="zd-badge <?= $badgeClass ?> js-status-badge-<?= (int)$t['id'] ?>">
+                                        <?= strtoupper(e($t['status'])) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: #17494d;">
+                                        <?= e($t['ticket_code']) ?>
+                                    </a>
+                                </td>
+                                <td>
+                                    <div>
+                                        <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" style="font-size: 13.5px; font-weight: 600; color: var(--zd-text-main);">
+                                            <?= e($t['subject']) ?>
+                                        </a>
+                                    </div>
+                                    <div style="font-size: 11.5px; color: var(--zd-text-muted); margin-top: 2px;">
+                                        <span><?= e($t['category_name']) ?></span>
+                                        <?php if ($t['reply_count'] > 0): ?>
+                                            <span> &middot; <?= (int)$t['reply_count'] ?> replies</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; font-size: 13px;"><?= e($t['customer_name']) ?></div>
+                                    <div style="font-size: 11px; color: var(--zd-text-muted);"><?= e($t['customer_email']) ?></div>
+                                </td>
+                                <td>
+                                    <span class="zd-badge <?= strtolower($t['priority']) === 'critical' ? 'zd-badge-open' : 'zd-badge-progress' ?>">
+                                        <?= e($t['priority']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-size: 12.5px; color: <?= $t['agent_name'] ? 'var(--zd-text-main)' : 'var(--zd-text-subtle)' ?>;">
+                                        <?= e($t['agent_name'] ?? 'Unassigned') ?>
+                                    </span>
+                                </td>
+                                <td style="font-size: 11.5px; color: var(--zd-text-muted);">
+                                    <?= date('M d, H:i', strtotime($t['created_at'])) ?>
+                                </td>
+                                <td style="text-align: right;">
+                                    <a href="ticket-view.php?id=<?= (int)$t['id'] ?>" class="btn btn-secondary btn-sm" style="padding: 3px 8px;">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
     </div>
+
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

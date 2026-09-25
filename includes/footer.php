@@ -1,18 +1,17 @@
-    </div>
-</main>
+<?php
+// =====================================================================
+// includes/footer.php
+// Clean Standard Footer for Zendesk Agent Workspace
+// =====================================================================
 
-<footer class="site-footer">
-    <div class="container footer-inner">
-        <div>
-            <strong>CoreDesk</strong> &middot; Built on Core PHP, MySQL &amp; Vanilla JS. Zero framework abstractions.
-        </div>
-        <div style="display: flex; gap: 16px; align-items: center;">
-            <span>Engineered by <strong>Diksha Damahe</strong></span>
-            <span>&bull;</span>
-            <a href="https://github.com/dikshadamahe/CoreDesk" target="_blank" rel="noopener">GitHub Repository</a>
-        </div>
-    </div>
-</footer>
+declare(strict_types=1);
+?>
+
+<?php if (empty($isAuthPage)): ?>
+        </main>
+    </div> <!-- /.zd-main-pane -->
+</div> <!-- /.zd-app-layout -->
+<?php endif; ?>
 
 <!-- Toast Notifications -->
 <div id="toast-container"></div>
