@@ -260,6 +260,7 @@ CoreDesk/
 | `api/assign_ticket.php` | `POST` | `{"ticket_id": 1, "agent_id": 2}` | Assigns or unassigns a ticket inside an ACID transaction and writes to `ticket_logs`. |
 | `api/update_status.php` | `POST` | `{"ticket_id": 1, "status": "In-Progress"}` | Updates ticket lifecycle state and logs previous vs. new values in `ticket_logs`. |
 | `api/add_reply.php` | `POST` | `{"ticket_id": 1, "message": "...", "is_internal_note": 0}` | Posts a customer reply or staff note and returns JSON representation of the new message. |
+| `api/keepalive.php` | `GET`, `HEAD` | `?skip_db=1` (optional) | Keeps free-tier instances warm (Render/Heroku/Fly.io), tests DB responsiveness, and returns health metrics. Alias: `api/health.php`. |
 
 ---
 

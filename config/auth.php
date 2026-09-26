@@ -42,7 +42,15 @@ function hasRole(string ...$allowedRoles): bool {
  */
 function requireLogin(): void {
     if (!isLoggedIn()) {
-        header('Location: login.php');
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        if (strpos($uri, '/api/') !== false || stripos($accept, 'application/json') !== false) {
+            http_response_code(401);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Authentication required', 'login_url' => '/login.php']);
+            exit;
+        }
+        header('Location: /login.php');
         exit;
     }
 }

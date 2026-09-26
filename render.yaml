@@ -6,6 +6,7 @@ services:
     region: oregon
     branch: main
     dockerfilePath: Dockerfile
+    healthCheckPath: /api/keepalive.php
     envVars:
       - key: DB_DRIVER
         value: sqlite
