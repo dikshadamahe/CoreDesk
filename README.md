@@ -3,6 +3,7 @@
 > A high-performance, multi-role incident management and customer support ticketing portal engineered in pure Core PHP 8.x, Vanilla JavaScript (ES6+), MySQL, and Apache.
 > Built strictly without heavy frameworks (No Laravel, Symfony, or WordPress CMS) to deliver low-level architectural control, raw SQL query optimization, and sub-millisecond execution times.
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-coredesk--o36w.onrender.com-46E3B7?style=flat&logo=render&logoColor=white)](https://coredesk-o36w.onrender.com/)
 [![PHP Version](https://img.shields.io/badge/PHP-8.0%20%7C%208.1%20%7C%208.2%20%7C%208.3%20%7C%208.5-777bb4?logo=php&logoColor=white)](https://php.net)
 [![Database](https://img.shields.io/badge/Database-MySQL%20%7C%20MariaDB%20%7C%20SQLite-00758f?logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Frontend](https://img.shields.io/badge/Frontend-Vanilla%20JS%20(Fetch%20API)-f7df1e?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
@@ -313,7 +314,7 @@ CoreDesk includes a production `Dockerfile` and a `render.yaml` Blueprint for ze
 2. Click **New +** and select **Blueprint**.
 3. Connect your GitHub repository: `dikshadamahe/CoreDesk`.
 4. Render will automatically detect `render.yaml` and configure the service as a Docker Web Service on the Free plan.
-5. Click **Apply**. Render will build the container and deploy your live public URL (`https://coredesk.onrender.com`).
+5. Click **Apply**. Render will build the container and deploy your live public URL (`https://coredesk-o36w.onrender.com/`).
 
 ### Option B: Manual Web Service Setup
 1. Go to your [Render Dashboard](https://dashboard.render.com).
