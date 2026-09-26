@@ -10,6 +10,9 @@
 [![Web Server](https://img.shields.io/badge/Server-Apache%20HTTPD-d22128?logo=apache&logoColor=white)](https://httpd.apache.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> 🌐 **Live Application URL:** [https://coredesk-o36w.onrender.com/](https://coredesk-o36w.onrender.com/)  
+> Instant access with 1-click demo logins (Admin, Agent, Customer) available directly on the sign-in page.
+
 ---
 
 ## User Interface & Application Screenshots
@@ -328,6 +331,8 @@ CoreDesk includes a production `Dockerfile` and a `render.yaml` Blueprint for ze
 ---
 
 ## Demo Access Profiles
+
+> 🚀 **Test Live Online:** [https://coredesk-o36w.onrender.com/login.php](https://coredesk-o36w.onrender.com/login.php)
 
 The sign-in page includes one-click role buttons for rapid evaluation:
 
